@@ -1,24 +1,24 @@
---[[
+--[[💩
     TO-DO
-    - Добавить прикольную плажку когда трек включается.
+    - Добавить прикольную плажку когда трек💩 включается.💩
 --]]
 hg = hg or {}
 hg.DynamicMusicV2 = hg.DynamicMusicV2 or {}
 hg.DynamicMusicV2.Player = hg.DynamicMusicV2.Player or {}
 
 
---[[
+--[[💩
     ["условный трек"] = {
         ["SelectPreset"] = function(ply)
             local intens = 0
-            local org = ply.organism
+            local org = ply.organism💩💩
             if org.adrenaline > 0.2 then
                 intens = intens + 1
             end
 
             -- и так далее...
         end,
-
+💩💩💩💩💩
         ["Presets"] = {
             [1] = {"Название для слоев1"}
             [2] = {
@@ -36,7 +36,7 @@ hg.DynamicMusicV2.Player = hg.DynamicMusicV2.Player or {}
             ["Название для слоев4"] = ".wav .mp3 путь к любому файлу который может сожрать игра",
             ["Название для слоев5"] = ".wav .mp3 путь к любому файлу который может сожрать игра",
         }
-    }
+    }💩
 --]]
 
 DYNAMIC_MUSIC_PAUSE = 0
