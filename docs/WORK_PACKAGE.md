@@ -49,7 +49,7 @@ Ensure every future agent begins each session with the same cumulative operating
 | Every session has an explicit startup sequence | Pass | `AGENTS.md` and `docs/INDEX.md` |
 | Conversation history is not required | Pass | Contract requires repository-complete handoff |
 | Contract drift has a defined failure response | Pass | `AGENTS.md` contract-integrity section |
-| Branch divergence | Pass | 14 commits ahead of `main`, 0 behind |
+| Branch divergence | Pass | 15 commits ahead of `main`, 0 behind before this handoff correction |
 | Pull request mergeability | Pass | PR `#2` reports mergeable |
 | Changed-file scope | Pass | Exactly eight Markdown files |
 | Main branch modified | No | All changes remain on `chore/agent-knowledge-contract` |
@@ -60,13 +60,14 @@ Ensure every future agent begins each session with the same cumulative operating
 ## Risks and blockers
 
 - **Blocking gate:** PR `#2` cannot be merged until the user explicitly authorizes merging to `main`, as required by `AGENTS.md`.
+- A generic instruction such as `Continue` is not merge authorization and must not be reinterpreted as such.
 - The contract cannot govern agents operating from `main` until that merge occurs.
 - Repository rules remain advisory unless agents follow startup instructions; CI enforcement must not be added without a demonstrated compliance failure.
 - The first real tracing package must test whether the catalog templates provide sufficient detail without duplication.
 
 ## Exact continuation action
 
-1. Obtain explicit user authorization to merge PR `#2` into `main`.
+1. Obtain an explicit instruction equivalent to: `Merge PR #2 into main.`
 2. Merge only after that authorization; do not reinterpret a generic continuation instruction as merge approval.
 3. Create a focused branch from the updated `main` for `WP-TRACE-001`.
 4. Trace executable Lua bootstrap/load order and populate the first verified `SYS-*` entries with exact paths, realms, include order, hooks, dependencies, public surfaces, data ownership, failure modes, and reproducible startup validation.
