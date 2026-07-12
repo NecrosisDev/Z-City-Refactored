@@ -25,16 +25,7 @@ A channel is `paired` only when both writer and reader have been located and the
 
 ## Trust-boundary rules
 
-Client-authored packets must be rejected unless all applicable checks are present:
-
-1. sender validity and authorization;
-2. active mode and round phase;
-3. alive/incapacitated/team/role state;
-4. bounded primitive sizes before table/string processing;
-5. server-side catalog resolution of identifiers;
-6. rate/cooldown limits;
-7. ownership, distance and line-of-sight for world interactions;
-8. duplicate/replay protection where state transitions are non-idempotent.
+Client-authored packets must be rejected unless all applicable checks are present: sender authorization; active mode/phase; alive/incapacitated/team/role state; bounded primitive sizes; server-side identifier resolution; rate limits; ownership/distance/line-of-sight; and replay protection for non-idempotent transitions.
 
 ---
 
@@ -42,10 +33,10 @@ Client-authored packets must be rejected unless all applicable checks are presen
 
 | Channel | Direction | Ordered schema | Authority / validation | Status and defects |
 |---|---|---|---|---|
-| `RoundInfo` | S -> C | `string modeName`, `int4 roundState` | Server authoritative; sent during transitions and late join. | `paired`; client invokes local mode transition callbacks. |
-| `FadeScreen` | S -> C | none | Server broadcast. | Client receiver not yet line-paired in this matrix; `one-sided`. |
-| `updtime` | S -> C | `float ROUND_TIME`, `float ROUND_START`, `float ROUND_BEGIN` | Sender ownership unresolved. | Client reader verified; `one-sided`. |
-| `ZB_SpectatePlayer` | S -> C | `entity spectated`, `entity previous`, `int4 viewMode` | Sender unresolved. | Client reader verified; `one-sided`. |
+| `RoundInfo` | S -> C | `string modeName`, `int4 roundState` | `libraries/sv_roundsystem.lua` sends during transitions and late join; `cl_init.lua` owns the receiver. | `paired`; client invokes local mode transition callbacks. |
+| `FadeScreen` | S -> C | none | `libraries/sv_roundsystem.lua:zb.AddFade` broadcasts after `zb:EndRound`. No repository `net.Receive("FadeScreen")` exists in the traced client entry or current mode/admin UI; round presentation instead uses `RoundInfo` to set `zb.fade` and server `Player:ScreenFade`. | `writer-only/dormant`; redundant presentation generation unless an external addon consumes it. |
+| `updtime` | S -> C | `float ROUND_TIME`, `float ROUND_START`, `float ROUND_BEGIN` | `init.lua:hg.UpdateRoundTime` owns server state and broadcasts; `cl_init.lua` reads the three floats into `zb.ROUND_*`. Called from round preparation/start paths. | `paired`. |
+| `ZB_SpectatePlayer` | S -> C | `entity spectated`, `entity previous`, `int4 viewMode` | `init.lua` sends from the validated dead-player `ZB_ChooseSpecPly` handler for attack/attack2/reload; `cl_init.lua` reads and updates spectator camera state. | `paired`; request channel accepts only a 32-bit key but has no explicit rate limit or key allowlist before branch checks. |
 
 ## Round administration and mode queue protocols
 
@@ -56,14 +47,16 @@ Client-authored packets must be rejected unless all applicable checks are presen
 | `ZB_RequestRoundList` | C -> S | none | Requires valid admin. | `paired`; no payload/rate limit. |
 | `ZB_UpdateRoundList` | C -> S | Lua table queue, `bool forceUpdate` | Requires admin; decoded table lacks explicit length/type/registered-ID/duplicate limits; bool is read but unused. | `paired`, high-trust table input. |
 | `ZB_NotifyRoundListChange` | S -> C admins | `string actorName` | Server recipients. | `paired`; client requests refreshed data. |
-| `SendAvailableModes` | S -> C admin | Lua table `{key,name}` records | Server admin check. | No receiver in current manager; `legacy/one-sided`. |
-| `AdminSetGameMode` | C -> S | `string command`, `string modeKey`, `bool addToQueue` | Admin check; duplicate receivers; effective later handler does not enforce `CanLaunch` because authorization condition is always false after guard. | `legacy/duplicate`. |
+| `SendAvailableModes` | S -> C admin | Lua table `{key,name}` records | `sv_roundsystem.lua` sends on admin initial spawn, with a duplicate same-identifier hook/implementation. | No receiver in `cl_modeselect_menu.lua`; `legacy/writer-only`. |
+| `AdminSetGameMode` | C -> S | `string command`, `string modeKey`, `bool addToQueue` | Admin check; duplicate receivers; effective later handler cannot enforce `CanLaunch` because its authorization condition is false after the admin guard. | `legacy/duplicate`; current UI still sends it for force-mode toggling. |
 | `AdminEndRound` | C -> S | none | Admin check. | `paired`; no rate limit. |
-| `AdminSetGameQueue` | C -> S | Lua table queue | Admin check; duplicate receivers; no shape/size/ID limits. | `legacy/duplicate`. |
-| `RequestGameQueue` | unresolved | unresolved | unresolved | Registered with no verified live endpoints. |
-| `SendGameQueue` | S -> C admins | Lua table queue | Server admin recipients. | Current UI uses newer `ZB_*` protocol; `legacy/one-sided`. |
-| `QueueEmptiedNotification` | S -> C admins | none | Server recipients. | Client receiver unresolved; `legacy/one-sided`. |
-| `QueueModifiedNotification` | S -> C admins | `string actorName`, `string action` | Server recipients. | Client receiver unresolved; `legacy/one-sided`. |
+| `AdminSetGameQueue` | C -> S | Lua table queue | Admin check; duplicate receivers; no shape/size/ID limits. | `legacy/duplicate`; current manager instead sends `ZB_UpdateRoundList`. |
+| `RequestGameQueue` | none verified | none verified | Registered in `sv_roundsystem.lua`; no repository sender or receiver found in the traced server/client queue implementation. | `registration-only/dormant`. |
+| `SendGameQueue` | S -> C admins | Lua table `zb.QueuedModes` | `sv_roundsystem.lua:zb.SyncQueueToAdmins` writes it; that function is defined twice. `cl_modeselect_menu.lua` has no receiver and uses `ZB_SendRoundList`. | `legacy/writer-only`. |
+| `QueueEmptiedNotification` | S -> C admins | none | Sent by `zb.NotifyQueueEmptied` and delayed after legacy `AdminSetGameQueue` clears the queue. No repository client receiver in the current manager. | `legacy/writer-only`. |
+| `QueueModifiedNotification` | S -> C admins except actor | `string actorName`, `string action` | Sent by `zb.NotifyQueueModified`; no repository client receiver in the current manager, which uses `ZB_NotifyRoundListChange`. | `legacy/writer-only`. |
+
+The active queue UI is the `ZB_*` generation. The legacy family shares server state (`zb.QueuedModes`) that is distinct from the active `zb.RoundList`, so retaining both is not merely redundant networking: it creates two queue models with duplicate receivers and divergent synchronization.
 
 ## TDM
 
@@ -78,21 +71,21 @@ Client-authored packets must be rejected unless all applicable checks are presen
 
 | Channel | Direction | Ordered schema | Validation | Status and defects |
 |---|---|---|---|---|
-| `CS_Intermission` | S -> C one player | `bool isTeam0`, `int6 roundsRemaining` | Server authoritative. | `paired`; consumer is nested `derma/cl_intermission.lua`. |
-| `CS_Killfeed` | S -> C | `bool killerTeam0`, `bool victimTeam0`, `string killerName`, `string victimName` | Produced by direct harm hook. | `paired`; names are presentation-only. |
-| `CS_Roundover` | S -> C | Server calls `WriteBool(winner)` where winner is numeric `0|1|3`; then `string winnerText`. Client reads bool + string. | Server authoritative. | `mismatch`: every Lua number is truthy, so team identity collapses. |
-| `bomb_look` | S -> C one player | `entity bombOrNull` | Entity interaction owner sends. | `paired`; client opens/closes bomb UI. |
-| `bomb_enter` | C -> S | `string code` | Server assumes alive player, organism movement state, `ply.bomb`, and bomb entity. No mode/phase/ownership/distance/LOS/rate/code-length/digit validation. | `paired`, critical interaction trust gap. |
-| `bomb_planted` | S -> C | none | Server authoritative. | `paired`; presentation receiver in nested Derma file. |
+| `CS_Intermission` | S -> C one player | `bool isTeam0`, `int6 roundsRemaining` | Server authoritative. | `paired`; nested Derma consumer. |
+| `CS_Killfeed` | S -> C | `bool killerTeam0`, `bool victimTeam0`, `string killerName`, `string victimName` | Produced by direct harm hook. | `paired`. |
+| `CS_Roundover` | S -> C | `WriteBool(winner)` where winner is numeric `0|1|3`, then `string winnerText` | Server authoritative. | `mismatch`: every Lua number is truthy, so team identity collapses. |
+| `bomb_look` | S -> C one player | `entity bombOrNull` | Entity interaction owner sends. | `paired`. |
+| `bomb_enter` | C -> S | `string code` | No mode/phase/ownership/distance/LOS/rate/code-length/digit validation. | `paired`, critical trust gap. |
+| `bomb_planted` | S -> C | none | Server authoritative. | `paired`. |
 
-Server `BombInSite` requires two site points. Client `BombInSite` returns true when fewer than two points exist, so client prediction/presentation can disagree with authoritative placement.
+Server `BombInSite` requires two site points; the client returns true when fewer than two exist, so prediction can disagree with authority.
 
 ## Deathmatch
 
 | Channel | Direction | Ordered schema | Validation | Status |
 |---|---|---|---|---|
 | `dm_start` | S -> C | `vector zonePosition`, `float zoneDistance` | Server authoritative. | `paired`. |
-| `dm_end` | S -> C | `entity winnerOrNull`, `entity mostViolentOrNull` | Server authoritative; winner sampled in delayed end path. | `paired`; client trusts entity flags and retains global result state until next start. |
+| `dm_end` | S -> C | `entity winnerOrNull`, `entity mostViolentOrNull` | Server authoritative; winner sampled in delayed end path. | `paired`; client retains global result state until next start. |
 
 ## Homicide
 
@@ -101,155 +94,98 @@ Server `BombInSite` requires two site points. Client `BombInSite` returns true w
 | Branch | S -> C ordered schema | Reader behavior | Status |
 |---|---|---|---|
 | Common prefix | `bool isTraitor`, `bool isGunner`, `string type`, `bool screenTimeIsDefault`, `string subRole`, `bool mainTraitor`, `string word1`, `string word2`, `uint13 traitorCount` | Client reads exact prefix. | paired prefix |
-| Main-traitor normal-start roster | Repeated `color`, `string appearanceName` **only for traitors with `CurAppearance`**; no roster count; then `string profession` | Client loops exactly `traitorCount` entries before reading profession. | `mismatch`; missing appearance causes stream underwrite/desynchronization. |
-| Pre-role-selection branch | Same prefix with `screenTimeIsDefault=false`; no roster; profession follows count. | Role selection is currently hard-disabled. | structurally paired but unreachable |
+| Main-traitor normal-start roster | Repeated `color`, `string appearanceName` only for traitors with `CurAppearance`; no roster count; then `string profession` | Client loops exactly `traitorCount` entries. | `mismatch`; missing appearance desynchronizes stream. |
+| Pre-role-selection branch | Same prefix with `screenTimeIsDefault=false`; no roster; profession follows count. | Role selection is hard-disabled. | structurally paired but unreachable |
 
 ### Other Homicide channels
 
 | Channel | Direction | Ordered schema | Authorization / validation | Status and defects |
 |---|---|---|---|---|
-| `HMCD(StartPlayersRoleSelection)` | S -> C and C -> S | S -> C: `string role`; C -> S: no payload acknowledgement | Server accepts only players in `ChoosingPlayersList`. | `overloaded`; feature hard-disabled upstream. |
-| `HMCD(EndPlayersRoleSelection)` | S -> C | none | Server authoritative. | `paired`; closes panel. |
-| `HMCD(SetSubRole)` | S -> C | `string subRole` | Sender not located. | `one-sided`; client receiver only. |
+| `HMCD(StartPlayersRoleSelection)` | both | S -> C `string role`; C -> S no payload | Server accepts only players in `ChoosingPlayersList`. | `overloaded`; feature hard-disabled upstream. |
+| `HMCD(EndPlayersRoleSelection)` | S -> C | none | Server authoritative. | `paired`. |
+| `HMCD(SetSubRole)` | S -> C | `string subRole` | Sender not located. | `one-sided`. |
 | `HMCDPoliceRole` | unresolved | unresolved | Only registration located. | `one-sided/dormant`. |
 | `hmcd_announce_traitor_lose` | S -> C | `entity traitor`, `bool alive` | Server authoritative. | `paired`. |
-| `HMCD_TraitorDeathState` | S -> C main traitors | `string appearanceName`, `bool alive` | Server builds recipient list; request path requires requester to be main traitor. | `paired`. |
-| `HMCD_RequestTraitorStatuses` | C -> S | none | Requires `isTraitor && MainTraitor`; no rate limit. | `paired`; response is one death-state packet per appearance-backed traitor. |
-| `hmcd_roundend` | S -> C | `uint13 traitorCount`, repeated entity; `uint13 gunnerCount`, repeated entity | Server authoritative. Client sets flags without validating read entities before member access. | `paired`; network string registered multiple times. |
-| `HMCD_UpdateTraitorAssistants` | S -> C main traitor | `uint8 count`, repeated `color`, `string name`, `string SteamID` | Server-selected recipient. | `paired`; independent count fixes the start-packet roster problem for later updates. |
+| `HMCD_TraitorDeathState` | S -> C main traitors | `string appearanceName`, `bool alive` | Server recipient selection. | `paired`. |
+| `HMCD_RequestTraitorStatuses` | C -> S | none | Requires main traitor; no rate limit. | `paired`. |
+| `hmcd_roundend` | S -> C | counted traitor and gunner entity lists | Server authoritative. | `paired`; duplicate registration. |
+| `HMCD_UpdateTraitorAssistants` | S -> C main traitor | `uint8 count`, repeated `color`, `string name`, `string SteamID` | Server-selected recipient. | `paired`. |
 
 ## Fear
 
 | Channel | Direction | Ordered schema | Validation | Status and defects |
 |---|---|---|---|---|
-| `check_lightness` | S -> C then C -> S on same channel | S -> C: `entity playerToSample`; C -> S: `vector lightColor` | Server accepts vector length <= sqrt(3), nonnegative components, and first response per sender while global `checkedPlayer` is set. It does not bind response to the requested entity/client or authenticate measurement. | `overloaded`, race/spoof risk. |
+| `check_lightness` | both | S -> C entity; C -> S vector | Does not bind response to requested entity/client or authenticate measurement. | `overloaded`, race/spoof risk. |
 
-Fear inherits all Homicide channels. `CanLaunch=false` does not prevent these receivers/direct hooks from loading.
+Fear inherits all Homicide channels. `CanLaunch=false` does not prevent receivers/direct hooks from loading.
 
-## Half-Life 2 Deathmatch
+## Half-Life 2 Deathmatch and CO-OP
 
 | Channel | Direction | Ordered schema | Validation | Status and defects |
 |---|---|---|---|---|
 | `hl2dm_start` | S -> C | none | Server authoritative. | `paired`. |
-| `hl2dm_roundend` | S -> C | Server writes nothing; client reads `int3 winnerTeam`. | Server authoritative. | `mismatch`. |
-| `ZB_RequestAirStrike` | C -> S | none; server derives target from sender eye trace | Requires `ply.leader`, per-player remaining strikes, global cooldown. No explicit active-mode/round/alive/incapacitated/rate check; leader flag can leak. | `paired`, authorization-state risk. |
-
-## CO-OP
-
-| Channel | Direction | Ordered schema | Validation | Status |
-|---|---|---|---|---|
+| `hl2dm_roundend` | S -> C | server writes nothing; client reads `int3 winnerTeam` | Server authoritative. | `mismatch`. |
+| `ZB_RequestAirStrike` | C -> S | none | Leader/counter/cooldown checks; active-mode/alive/state checks incomplete. | `paired`. |
 | `coop_start` | S -> C | none | Server authoritative. | `paired`. |
 | `coop_roundend` | S -> C | none | Server authoritative. | `paired`. |
 
-NPC possession is driven by direct `PlayerButtonDown` server logic rather than a network channel.
-
 ## Defense
 
-### Vote and lifecycle channels
-
 | Channel | Direction | Ordered schema | Validation | Status and defects |
 |---|---|---|---|---|
-| `defense_start_vote` | S -> C | `float voteDeadline` | Server authoritative. | `paired`. |
-| `defense_submit_vote` | C -> S | `int4 vote` | Valid player, one-second sender rate limit, vote 1..3, active Defense + vote phase, one initial vote. | `paired`. |
-| `defense_change_vote` | C -> S | `int4 previousVote`, `int4 newVote` | One-second rate limit, new vote 1..3, active Defense + vote phase; server ignores transmitted previous value and uses stored vote. | `paired`; redundant client field. |
-| `defense_vote_update` | S -> C | Lua table vote counts | Server authoritative; unversioned table. | `paired`. |
-| `defense_vote_result` | S -> C | `string selectedMode`, Lua table vote counts | Server authoritative. | `paired`. |
-| `defense_show_selected_mode` | S -> C | `string selectedMode` | Server authoritative. | `paired`. |
-| `npc_defense_start` | S -> C | none | Server authoritative. | `paired`; duplicate client receivers reset commander hint state. |
-| `npc_defense_prepphase` | S -> C | none | Server authoritative. | `paired`; commander UI also listens for hint display. |
-| `npc_defense_newwave` | S -> C | `float deadline`, `int4 wave` | Server authoritative. | `mismatch`: traced client reads only the float. |
-| `npc_defense_roundend` | S -> C | none | Server authoritative. | `paired`. |
-| `StartWaveMusic` | S -> C | `string soundPath` | Server selects from mode data. | `paired`; client resource/path validation remains presentation concern. |
-| `StopWaveMusic` | S -> C | none | Server authoritative. | `paired`. |
-| `defense_boss_incoming` | S -> C | none | Server authoritative. | Client endpoint exists in large UI file; paired by source inventory. |
-| `defense_highlight_last_npcs` | S -> C | Lua table of remaining NPC entity indices | `sv_defense_hooks.lua` broadcasts when tracked count is 1–3 and the list changes or periodic resend is due; client resolves valid entities and outlines them. | `paired`; unversioned Lua table and periodic world-state broadcast. |
-
-### Commander, support and administration channels
-
-| Channel | Direction | Ordered schema | Validation | Status and defects |
-|---|---|---|---|---|
-| `RequestSupport` | C -> S | `string supportType` | Two-second sender rate limit; Commander role; active Defense; global 290-second cooldown; incapacitation check; server catalog resolution. Does not explicitly require alive before role/mode handling, though role is normally assigned alive. | `paired`. |
-| `defense_commander_menu` | C -> S and S -> C | C -> S: none; S -> C: Lua table `DEFENSE_COMMANDER_ITEMS` | Commander + alive; one-second request and five-second send limits. | `overloaded`, paired. |
-| `defense_commander_purchase` | C -> S | Lua table item requests | Commander + alive + active mode + incapacitation check; raw message length <=8192; table <=20; server item catalog resolution; per-request quantity capped at 10; one-second rate. | `paired`; table shape remains implicit and quantity lower/type bounds need validation. |
-| `defense_commander_notification` | S -> C | `string message`, `int16 pointDelta` | Server authoritative. | `paired`; registered in multiple auxiliary files. |
-| `defense_commander_points` | none verified | none verified | Network string is registered, but repository search found no writer or reader. Commander points are replicated through `NWInt("CommanderPoints")`. | `registration-only/dormant`. |
-| `defense_player_role_assigned` | S -> C | `string role` | Server sends to assigned Commander from role setup/admin helper; repository search found no client receiver. Clients infer role through `NWString("PlayerRole")`. | `writer-only`; redundant with NWVar state. |
-| `defense_admin_command` | C -> S | `string command`, Lua table `args` | Requires admin/superadmin. Command allowlist is inline (`start_wave`, `end_wave`, `set_wave`, `add_points`); numeric arguments must be positive. No sender located in repository, no table size/type/rate/active-mode guard, and `start_wave` calls `MODE:StartWave(wave)` although the method ignores the argument. | `reader-only/admin trust boundary`. |
+| vote family | mixed | primitives plus result/update tables | Mode/phase/rate checks on votes. | `paired`; unversioned tables. |
+| `npc_defense_newwave` | S -> C | `float deadline`, `int4 wave` | Server authoritative. | `mismatch`: client reads only float. |
+| wave/music/boss/highlight family | S -> C | none/string/table as cataloged | Server authoritative. | `paired`; highlight uses periodic entity-index table. |
+| `RequestSupport` | C -> S | `string supportType` | Commander/mode/incapacitation/cooldown/catalog checks; alive check implicit. | `paired`. |
+| `defense_commander_menu` | both | empty request; Lua table response | Commander + alive + rate limits. | `overloaded`, paired. |
+| `defense_commander_purchase` | C -> S | Lua table requests | Size/count/catalog/rate checks; implicit item schema and weak quantity typing. | `paired`. |
+| `defense_commander_notification` | S -> C | `string`, `int16` | Server authoritative. | `paired`. |
+| `defense_commander_points` | none | none | Registration only; actual state uses NWInt. | dormant. |
+| `defense_player_role_assigned` | S -> C | `string role` | No client receiver; actual state uses NWString. | writer-only/redundant. |
+| `defense_admin_command` | C -> S | `string`, Lua table | Admin allowlist; no sender, rate/size or active-mode guard. | reader-only. |
 
 ## Crisis Response
 
 | Channel | Direction | Ordered schema | Validation | Status and defects |
 |---|---|---|---|---|
-| `criresp_start` | S -> C | none | Server authoritative. | `paired`; opens menu and triggers customization send. |
-| `criresp_ready` | C -> S | none | Active mode, round state 0, sender must be in assigned table. No unready/revoke; no explicit rate limit. | `paired`. |
-| `criresp_readycount` | S -> C | `uint8 ready`, `uint8 total` | Server authoritative. | `paired`. |
-| `criresp_begin` | S -> C | none | Server authoritative. | `paired`. |
-| `criresp_custom` | C -> S | `uint8 primary`, `string bodygroups`, `uint4 gearCount`, repeated `uint8 gearID` | Bodygroup string capped at 48 chars; count capped to slots; IDs catalog-checked/deduplicated. No mode/phase/assignment/SWAT/rate check; bodygroup values/model compatibility not validated. | `paired`, persistent client-state risk. |
-| `criresp_over20` | C -> S | `bool enabled` | Requires admin; mutates replicated convar. | `paired`; no rate limit. |
-| `cri_roundend` | S -> C | `uint4 winner`, `uint8 killed`, `uint8 incapacitated`, `uint8 arrested`, `uint8 total` | Server authoritative. | `paired`; client applies 8.5-second input lock. |
+| `criresp_start` / `ready` / `readycount` / `begin` | mixed | cataloged primitives | Partial phase/assignment checks. | `paired`. |
+| `criresp_custom` | C -> S | `uint8 primary`, bodygroup string, counted gear IDs | Partial bounds; no mode/phase/role/rate/model validation. | `paired`, persistent client-state risk. |
+| `criresp_over20` | C -> S | bool | Admin only. | `paired`. |
+| `cri_roundend` | S -> C | winner and four uint8 counts | Server authoritative. | `paired`. |
 
 ## Pathowogen
 
 | Channel | Direction | Ordered schema | Validation | Status and defects |
 |---|---|---|---|---|
-| `zb_furbriefing` | S -> C player | none | Server role assignment. | `paired`. |
-| `zb_furfurbriefing` | S -> C player | none | Server role assignment. | `paired`. |
-| `zb_furtraitorbriefing` | S -> C player | none | Server role assignment. | `paired`. |
-| `zb_contractortransmit` | S -> C traitors | `string text` | Server recipient selection. | `paired`; duplicate sends can occur because transmit is called inside a loop while sending to full list. |
-| `zb_commandertransmit` | S -> C humans/squad | `string text` | Server recipient selection. | `paired`. |
-| `zb_extractionheli` | S -> C | `entity helicopter` | Server authoritative. | `paired`; client global state persists until round-start reset. |
-| `zb_extractionpoint` | S -> C selected players | `vector point` | Server authoritative. | `paired`. |
-| `zb_traitorextractionpoint` | S -> C traitors | `vector point` | Server authoritative. | `paired`; server loops eligible traitors but sends to full list each iteration. |
-| `ZB_Pathowogen_RoundEnd` | S -> C | `uint3 winCondition`, Lua table player consequence report | Server authoritative; table includes entity keys/state. | `paired`; unversioned, potentially large table. |
+| briefing family | S -> C player | none | Server role assignment. | `paired`. |
+| transmit family | S -> C selected players | string | Server recipient selection. | `paired`; duplicate full-list sends can occur. |
+| extraction entity/point family | S -> C | entity or vector | Server authoritative. | `paired`; duplicate traitor full-list sends and persistent globals. |
+| `ZB_Pathowogen_RoundEnd` | S -> C | `uint3 winCondition`, Lua table report | Server authoritative. | `paired`; unversioned potentially large table. |
 
 Pathowogen is normally disabled by `CanLaunch=false`, but all receivers remain loaded.
 
-## Riot, Gang Wars, Superfighters, Slug Arena
+## Additional modes and Event
 
-| Channel | Direction | Ordered schema | Status / defects |
-|---|---|---|---|
-| `riot_start` | S -> C | none | paired |
-| `riot_roundend` | S -> C | none | paired |
-| `gwars_start` | S -> C | none | paired |
-| `gwars_roundend` | S -> C | none | paired |
-| `supfight_start` | S -> C | `vector zonePoint` | paired; launch does not validate point existence |
-| `supfight_end` | S -> C | `entity winnerOrNull` | paired; winner sampled after delay |
-| `scugarena_start` | S -> C | none | paired |
-| `scugarena_end` | S -> C | `entity winnerOrNull` | paired; winner sampled after delay |
-
-## Event mode
-
-| Channel | Direction | Ordered schema | Validation | Status and defects |
-|---|---|---|---|---|
-| `event_start` | S -> C | none | Server authoritative. | paired |
-| `event_end` | S -> C | `entity winnerOrNull` | Server authoritative. | paired; delayed winner sampling |
-| `event_eventers_update` | S -> C | Lua table SteamIDs | Server authoritative. | paired; unversioned table |
-| `event_loot_sync` | S -> C authorized users | Lua table `{weight,class}` entries | Server selects admins/eventers. | paired; no explicit total-size/schema version |
-| `event_loot_add` | C -> S | Lua table `{weight,class}` | Requires admin or current EventersList membership. Checks field presence only; no type/range/class/catalog/rate/size limits. | paired, high-risk persistent input |
-| `event_loot_remove` | C -> S | `uint16 itemIndex` | Requires admin/eventer and existing index; no rate limit. | paired |
-| `event_loot_request` | C -> S and S -> C | C -> S: no payload; S -> C: no payload opens menu | Server requires admin/eventer for request; client also exposes admin-only menu command. | `overloaded`; server concommand sends this channel to client. |
-| `event_loot_update` | unresolved | unresolved | Registered but no verified endpoints. | one-sided/dormant |
-
-Event loot is persisted to `data/zbattle/event_loot/loot_table_<hostname>.txt`; client-authored additions therefore cross both network and persistence trust boundaries.
+Riot, Gang Wars, Superfighters, Slug Arena and Event start/end channels are paired as previously cataloged. Event loot synchronization remains a persistence trust boundary: `event_loot_add` accepts weakly validated client tables; `event_loot_update` is registration-only/dormant.
 
 ## Highest-priority protocol defects
 
-1. `HMCD_RoundStart` roster count/record-count desynchronization.
-2. `bomb_enter` lacks world-interaction, phase, format, ownership and rate validation.
-3. Admin queue protocols accept unbounded/untyped Lua tables and overlap across two generations.
-4. Base TDM and HL2DM have guaranteed sender/reader field mismatches.
-5. Counter-Strike winner IDs are encoded as bools.
-6. Defense new-wave writes an unread field; commander purchase/admin endpoints rely on implicit Lua-table schemas.
-7. Fear light measurement trusts client-authored samples through a global request slot.
-8. Crisis customization is accepted outside the intended mode/phase/role and persists.
-9. Event loot additions accept weakly validated client data and persist it.
-10. Disabled/zero-chance modes retain live receivers and global/direct-hook state.
+1. `HMCD_RoundStart` conditional roster desynchronization.
+2. `bomb_enter` missing interaction authorization and format/rate checks.
+3. Active and legacy queue generations accept weak tables, duplicate handlers and maintain divergent queue state.
+4. Base TDM and HL2DM sender/reader mismatches.
+5. Counter-Strike winner IDs encoded as bools.
+6. Defense unread wave field and implicit commander/admin table schemas.
+7. Fear client-authored light samples.
+8. Crisis customization outside intended ownership/phase.
+9. Event loot persistence from weak client data.
+10. Disabled modes retaining live receivers/direct state.
 
 ## Required runtime validation
 
-- Capture every channel during a dedicated-server cycle for each mode and assert exact read/write bit counts.
-- Fuzz every client-to-server endpoint with wrong phase, role/team, dead/incapacitated sender, oversized strings/tables, invalid IDs/entities and rapid replay.
-- Instrument duplicate `net.Receive` registrations and prove the effective handler.
-- Verify every one-sided/dormant registration against external addons before removal.
-- Introduce protocol versions or explicit record counts before changing variable packet schemas.
-- Freeze authoritative round results before delayed presentation packets.
+- Capture every channel during dedicated-server cycles and assert exact bit counts.
+- Fuzz every client-to-server endpoint for phase, role/team, dead/incapacitated state, oversized data, invalid IDs/entities and replay.
+- Instrument duplicate `net.Receive` registrations and prove effective handlers.
+- Verify one-sided/dormant names against external addons before removal.
+- Version or count variable schemas before changing them.
+- Freeze authoritative results before delayed presentation packets.
