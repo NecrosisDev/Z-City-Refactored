@@ -1,6 +1,6 @@
 # Active Work Package
 
-> This file contains only the current package and immediate continuation state. Completed detail belongs in commits, pull requests, architecture documents, catalogs, tests, or decision records.
+> Current bounded package and continuation state. Durable detail belongs in the linked architecture documents, catalogs, matrices, commits, PR discussion, and validation records.
 
 ## Identity
 
@@ -9,138 +9,84 @@
 - **Branch:** `docs/architecture-baseline`
 - **Pull request:** `#1`
 - **Status:** `active research`
-- **Knowledge state:** mixed `Verified` and explicitly labeled `Inferred`; comments and inherited documentation remain claims until confirmed in executable code or runtime evidence
+- **Runtime baseline:** `429ec928203cec963176dfb6afd086dcdd01c181`; documentation-only branch
 
-## Desired outcome
+## Non-negotiable rules
 
-Produce a self-contained, implementation-ready knowledgebase of the current project before refactoring begins. A future agent must be able to understand each system, runtime behavior, ownership, contracts, dependencies, failure modes, integration surfaces, and validation procedure without repeating broad discovery.
+- Continue on `docs/architecture-baseline`; PR `#1` is the only active review surface.
+- Do not create another branch or PR and do not modify runtime Lua during research.
+- Executable code and reproducible runtime evidence outrank comments and inherited documentation.
+- Label claims `Verified`, `Inferred`, `Legacy Claim`, or `Planned`.
+- Continue after every bounded trace until integration research is complete or genuinely blocked.
 
-## Non-negotiable branch and session rules
+## Completed baseline
 
-- Continue all current research and documentation on `docs/architecture-baseline`; do not create a branch per work package.
-- PR `#1` is the single active review surface against `main` during research.
-- Historical `chore/agent-knowledge-contract` and closed PRs `#2`/`#3` are obsolete consolidation artifacts; never resume work from them.
-- Lack of merge permission is not a research blocker.
-- Continue after every bounded trace until research and subsequent integration are complete.
-- Preserve every cumulative rule in root `AGENTS.md`.
-- Keep chat output to two-sentence TL;DRs; durable detail belongs in the repository.
-- Add only the smallest authoritative mechanism that prevents rediscovery, drift, or regression.
+- Bootstrap/load order, realm routing, mode registration, round lifecycle, all known mode directories, mode-function matrix, packet matrix, public surfaces, file-manifest boundaries, organism architecture, and core fake-ragdoll architecture are documented.
+- Counter-Strike objective entities, Homicide/Fear endpoints, Defense auxiliary files, Pathowogen endpoints, active/legacy queue protocols, time/spectator synchronization, and one-sided round channels are classified.
+- `SYS-ORGANISM` and `SYS-FAKE-RAGDOLL` now record ownership, state, damage, replication, fake creation/control, death reuse, get-up, camera/render, transport, validation, and major risks.
 
-## Verified completed research
+## Newly verified fake-ragdoll/get-up ownership
 
-- Project structure, bootstrap/load order, realm routing, mode registration, round lifecycle, shared system/behavior/type contracts, file-manifest boundaries, and public surfaces are documented.
-- Every known top-level mode directory has a verified registry identity.
-- `MODE_FUNCTION_MATRIX.md` classifies the effective callback/helper surface for the complete known registry.
-- `PACKET_MATRIX.md` records verified core/admin and mode packet families, schemas, mismatches, trust checks, duplicate generations and dormant endpoints.
-- Counter-Strike objective entities, Homicide assistant/death-state/role-selection, and Defense auxiliary function/packet surfaces are traced.
-- Core synchronization ownership is now closed:
-  - `updtime` is paired from `gamemode/init.lua:hg.UpdateRoundTime` to `cl_init.lua`;
-  - `ZB_SpectatePlayer` is paired from dead-player `ZB_ChooseSpecPly` handling in `init.lua` to `cl_init.lua`;
-  - `FadeScreen` is writer-only from `sv_roundsystem.lua:zb.AddFade`, with no repository receiver and overlapping `RoundInfo`/`ScreenFade` presentation;
-  - `RequestGameQueue` is registration-only;
-  - `SendGameQueue`, `QueueEmptiedNotification`, and `QueueModifiedNotification` are legacy writer-only channels with no current manager receivers.
-- The active `ZB_*` round-list protocol uses `zb.RoundList`; the legacy queue generation uses separate `zb.QueuedModes`, duplicate handlers and duplicate synchronization functions.
-- Verified round emitters are `ZB_PreRoundStart`, `TTTPrepareRound`, `ZB_StartRound`, and `ZB_EndRound` in `libraries/sv_roundsystem.lua`.
-- Organism initialization, attachment, major state groups, module order, primary damage flow and `organism_send` replication are source-traced in `docs/architecture/ORGANISM_SYSTEM.md` and the catalogs.
+Source: `lua/homigrad/fake/sv_tier_0.lua` blob `0fa522db3f0562eaf1816d6452fa082aef81d2bb`.
 
-## Newly verified framework ownership
+- `hg.FakeUp` sets the undeclared global `OverrideSpawn = true`, calls `hg.OverrideSpawn(ply)`, invokes `ply:Spawn()`, then clears the global with `OverrideSpawn = nil`.
+- The global lifetime is therefore synchronous only on the successful get-up path, but it is process-global rather than player- or mode-scoped. Any error between assignment and cleanup can leak spawn suppression to unrelated players and rounds.
+- Get-up preserves health, armor, eye angles, active-weapon class, selected rope weapon, ragdoll velocity, fire state, flashlight permission, and selected movement/render/collision state, but restoration is not transactional.
+- The spawn call occurs before the player is moved to the resolved get-up position. Normal `GM:PlayerSpawn` work is suppressed by the global gate, while `hg.OverrideSpawn(ply)` is a separate pre-spawn restoration hook/API and must not be conflated with either the global or `MODE.OverrideSpawn`.
+- Delayed cleanup uses `timer.Create("faking_up" .. EntIndex, ...)`; body removal, `FakeRagdoll` NWEntity clearing, movement/collision restoration, and `hg.ragdollFake` cleanup can therefore be interrupted by disconnect, death, replacement body creation, or timer-name reuse.
+- `PlayerDisconnected/hg-killniers` creates a new organism on the death ragdoll, merges the player organism, changes `owner`, then calls `hg.organism.Clear(ply.organism)`. This is copy/merge semantics rather than the normal shared-table transfer contract and requires direct validation for alias loss, duplicated delayed writers, and invalid API arguments.
+- `hg.RagdollOwner` only returns an owner when `ply.FakeRagdoll == ragdoll`; death bodies and stale/replaced generations intentionally fail this lookup.
+- Vehicle transitions branch through global `hg.leaveveh` / `hg.fallfromveh`, delayed fake entry, seat-switch timers, welds, parents, and forced get-up. These globals are not player-scoped and are high-risk under concurrent players.
 
-### Spawn selection and overrides
+## Still-open framework inventory
 
-- `gamemodes/zcity/gamemode/init.lua:getRandSpawn` rebuilds a realm-local `spawners` array at load and `InitPostEntity`.
-- Map points named `Spawnpoint` are authoritative when at least one exists. Only when none exist does the code collect `info_player_start` plus the broad `default_spawns` class list.
-- `zb:GetRandomSpawn` and `zb:FurthestFromEveryone` fall back to the cached `spawners` table when no explicit choices are supplied.
-- `GM:PlayerSpawn` checks the undeclared global `OverrideSpawn` first and returns immediately when truthy. This suppresses all normal view/spectate/movement/team/appearance handling in that function.
-- The separate mode member `CurrentRound().OverrideSpawn` only suppresses the default team and appearance reassignment block; it does not return from `GM:PlayerSpawn`.
-- These names therefore represent two distinct contracts despite sharing the same spelling. The global is not mode-scoped and must be traced across fake-ragdoll/respawn callers for leakage and cleanup.
-- The requested misspelling `OverideSpawnPos` remains unresolved and must be searched across every known source path before absence can be claimed.
-
-### Map-point consumers
-
-- `Spawnpoint` points feed the primary random-spawn cache.
-- `RandomSpawns` points feed `zb.GetWorldSize`; the function computes the maximum squared pairwise point distance and returns its square root. With fewer than two useful points it returns zero, affecting `ForBigMaps` mode availability.
-- Team spawning calls `CurrentRound():GetTeamSpawn()` and substitutes one random spawn for either empty team list.
-- Objective/extraction point APIs remain to be enumerated from the point-system owner and all mode/entity consumers.
-
-### Round termination
-
-- `zb:EndRound()` in `gamemodes/zcity/gamemode/libraries/sv_roundsystem.lua` is the verified core termination entry. It sets state `3`, increments round count, broadcasts `RoundInfo`, invokes the current mode's `EndRound`, emits `ZB_EndRound`, sends `FadeScreen`, and saves achievements.
-- `GM:PlayerInitialSpawn` calls `zb:EndRound()` after creating a temporary bot when the first player joins.
-- No `zb.EndMatch` definition or call exists in the two verified core ownership files (`gamemode/init.lua` and `libraries/sv_roundsystem.lua`). Repository-wide absence is not yet proven because connector code search is timing out; mode/entity files must still be checked directly.
-
-### COMMANDS publisher evidence
-
-- `libraries/sv_roundsystem.lua` publishes `COMMANDS.bigmap = {handler, 0}` without initializing `COMMANDS` locally.
-- The handler performs its own `ply:IsAdmin()` check, parses `args[1]` with `tonumber`, mutates `ZBATTLE_BIGMAP`, rerolls chances, and persists `data/zbattle/mapsizes.json`.
-- A missing/non-numeric argument can assign `nil`, then string concatenation and later comparisons can fail. The trailing `0` is an unresolved framework field until the registry/dispatcher owner is located.
-- Registry initialization, chat/console parser, dispatch semantics, generic permission/cooldown enforcement, realm exposure, collision behavior and all additional publishers remain unresolved.
-
-## High-impact verified findings
-
-### Framework
-
-- Global and gamemode loaders differ in realm/traversal rules; neither explicitly sorts `file.Find` results.
-- Mode inheritance requires an already-registered base despite unsorted mode-directory enumeration.
-- Every function-valued mode member becomes a hook candidate; dot-defined functions receive shifted arguments.
-- Round states are `0`, `1`, `3`; stale comments/listeners use `2`.
-- Round administration contains overlapping protocols, duplicate name-keyed registrations, weak client-table validation and two divergent queue-state tables.
-- `FadeScreen` is currently an unconsumed writer, while end-round fading is also implemented through `RoundInfo` client state and server `Player:ScreenFade` calls.
-- `GM:PlayerInitialSpawn` can spawn a temporary bot and force `zb:EndRound()` when the first player joins, coupling population bootstrap to lifecycle transitions.
-- Spawn behavior is controlled by both an undeclared global `OverrideSpawn` and a mode-table member of the same name with materially different effects.
-- Big-map eligibility depends on `RandomSpawns` map-point coverage rather than BSP/world bounds.
-
-### Function and packet matrices
-
-- Internal services published as hooks include Homicide role/spawn helpers, Fear event/victim helpers, Defense wave/spawn/timer/economy helpers, CO-OP equipment helpers, Event persistence helpers and Pathowogen extraction services.
-- Confirmed packet mismatches remain base `tdm_start`, `CS_Roundover`, `hl2dm_roundend`, `npc_defense_newwave`, and conditional `HMCD_RoundStart` roster decoding.
-- Highest-risk client inputs remain admin queue/list tables, TDM purchases, bomb codes, Fear light vectors, Crisis customization, Defense commander support/purchase/admin commands, and Event persistent loot edits.
-- Fear and Pathowogen are hard-disabled for normal selection but still load receivers, direct hooks and dispatch surfaces.
-- Multiple systems listen on names that differ from verified core emitters: CO-OP uses `ZB_RoundStart`; Defense support uses `RoundEnd`; core emits `ZB_StartRound` and `ZB_EndRound`.
+- The `COMMANDS` registry initializer/parser/dispatcher, generic permission/cooldown semantics, collision behavior, realm exposure, and complete publisher list remain unresolved. Confirmed publisher: `COMMANDS.bigmap = {handler, 0}` in `libraries/sv_roundsystem.lua`.
+- Global `OverrideSpawn` is now verified in `GM:PlayerSpawn` and fake get-up. All additional assignments/readers still require source enumeration.
+- `MODE.OverrideSpawn` is a distinct mode-table gate that suppresses only default team/appearance assignment.
+- `OverideSpawnPos` remains unresolved; repository-wide absence is not proven.
+- `zb:EndRound()` is the verified termination API. No `zb.EndMatch` reference exists in fetched core/fake files, but repository-wide absence is not yet proven.
+- Point-system storage/editor APIs and all objective/extraction/UI consumers remain incomplete.
 
 ## Current bounded trace
 
-Close the unresolved framework command registry and remaining spawn/point/lifecycle symbols, then continue organism-to-fake-ragdoll ownership integration.
+Close the remaining command/spawn/point/lifecycle symbols, then continue fake-ragdoll integration into movement, player classes, weapons, vehicles, appearance, spectator/camera, and organism consumers.
 
 ### Required outputs
 
-1. Locate the `COMMANDS` registry initializer, parser, dispatcher, permission/cooldown semantics and every publisher; classify collisions and realm exposure.
-2. Enumerate every global `OverrideSpawn` assignment/read and every mode-table `OverrideSpawn`; establish setup/reset lifetime and cross-round leakage.
-3. Locate every `OverideSpawnPos` spelling or prove repository-wide absence from fetched sources.
-4. Trace map-point storage/load/edit APIs and every spawn, objective, extraction, world-size and UI consumer.
-5. Locate every `zb.EndMatch` definition/call or prove repository-wide absence; distinguish all call sites from `zb:EndRound()`.
-6. Finish organism input/medical/effect writers, then trace fake-ragdoll creation, ownership transfer, input, networking, get-up, death and combat.
-7. Update existing catalogs/reference files only; do not create duplicate indexes, branches or PRs.
+1. Locate the `COMMANDS` initializer, parser, dispatcher, permission/cooldown behavior, realm exposure, overwrite/collision semantics, and every `COMMANDS.*` publisher.
+2. Enumerate every global `OverrideSpawn` assignment/read and every `MODE.OverrideSpawn`; prove setup/reset lifetime and failure leakage.
+3. Locate every `OverideSpawnPos` spelling or prove absence from an exact recursive file manifest.
+4. Trace map-point persistence/editor APIs plus every spawn, objective, extraction, world-size, mode, entity, and UI consumer.
+5. Locate every `zb.EndMatch` definition/call or prove absence from an exact recursive file manifest; keep it distinct from `zb:EndRound()`.
+6. Trace `hg.OverrideSpawn(ply)` definition and all publishers/consumers; classify it separately from both `OverrideSpawn` gates.
+7. Trace fake-ragdoll transition consumers in movement, player classes, weapons, vehicles, appearance, camera/spectator, death, and disconnect paths.
+8. Update existing catalogs/reference files and this handoff only; do not create duplicate indexes.
 
 ## Validation requirements
 
-- Cross-check both packet endpoints and every conditional branch; never infer a schema from one side.
-- Separate expected name-keyed overwrite behavior from runtime-confirmed behavior.
-- Verify all client values are typed, bounded, authorized, phase-checked, rate-limited and server-resolved where applicable.
-- Verify server/client mode registries agree on IDs, inheritance and callback sets.
-- Verify every function classification against actual callers and dynamic hook emitters, including inactive modes.
-- Review UI, persistence, selection, points, spawn, team, organism, inventory, appearance, weapons, entities, NPCs, vehicles, audio/render state and cleanup consumers.
-- Introduce no runtime Lua, assets, configuration or `main` changes during research.
+- Instrument get-up with failure injection around `OverrideSpawn` assignment, `hg.OverrideSpawn`, `Spawn`, position restore, body removal, timers, death, and disconnect; assert global cleanup in every exit.
+- Exercise simultaneous fake/get-up and vehicle transitions for multiple players to expose process-global `OverrideSpawn`, `hg.leaveveh`, and `hg.fallfromveh` interference.
+- Assert one organism owner generation across player, fake body, death body, disconnect conversion, delayed callbacks, and packet/NWEntity reordering.
+- Capture `Player Ragdoll`, `Override Spawn`, organism snapshots, NWEntity changes, late join, PVS changes, and undefined `net.ReadEntity2()` behavior.
+- Runtime-confirm loader order, duplicate hook/net registration, command collision behavior, and server/client public-surface parity.
+- Do not patch documented defects before adjacent contracts and regression boundaries are complete.
 
-## Risks and evidence gaps
+## Evidence gaps and blockers
 
-- Static source cannot prove total startup order, unsorted enumeration order, inactive-hook execution or effective duplicate overwrite behavior; temporary runtime instrumentation is required later.
-- Recursive path enumeration remains incomplete because connector code search and directory listing are unreliable; discovery continues through known paths, indexed results and fetched executable files.
-- GitHub code search timed out repeatedly during this trace, so repository-wide negative claims for `COMMANDS`, `OverideSpawnPos`, `zb.EndMatch` and override publishers remain open.
-- Some matrix rows are symbol/blob-complete rather than original line-offset complete.
-- No dedicated-server smoke-test evidence has been captured.
-- One-sided/dormant packet names must be checked against external addons before removal.
-- Documented defects must not be patched until adjacent contracts and integration boundaries are mapped.
+- Connector code search is repeatedly timing out and directory-listing is unavailable, so repository-wide negative claims cannot yet be made from search alone.
+- Direct file fetching remains available and is the required fallback: use known manifests, source references, loader paths, mode catalogs, and exact include paths to enumerate files.
+- No dedicated-server runtime evidence has been captured.
+- External-addon readers for one-sided channels remain unknown.
 
 ## Dependency-ordered continuation
 
-1. Fetch likely command/chat framework files and all known command-publishing mode files directly; close `COMMANDS` ownership without relying on code search.
-2. Fetch fake-ragdoll and round/spawn files to enumerate global `OverrideSpawn` lifetime and organism transfer.
-3. Fetch point-system/editor files and each objective/extraction consumer.
-4. Complete Pathowogen client/inactive-mode boundaries.
-5. Continue through fake-ragdoll, movement and player classes, then combat/weapons/explosives, inventory/equipment/appearance, NPC/bots, UI/camera/spectator and persistence/admin/security/integrations.
-6. Produce the cross-system integration map, regression matrix, verified defect catalog and implementation-ready remediation packages.
-7. Begin implementation only after research defines boundaries and the user approves transition.
+1. Fetch likely command/chat/admin files under `lua/homigrad/zchat`, `adminsystem`, `admintools`, gamemode `libraries/!core`, and every known publisher path; close `COMMANDS` ownership.
+2. Fetch all fake/spawn/movement/player-class files; close `OverrideSpawn`, `hg.OverrideSpawn`, `OverideSpawnPos`, get-up, disconnect, death, and concurrent-player state.
+3. Fetch `libraries/mappoints/**`, point editor/UI files, objective entities, extraction modes, and world-size consumers.
+4. Prove or locate `zb.EndMatch` through the exact file manifest.
+5. Continue weapons/physical bullets/armor/explosives, inventory/equipment/appearance, NPC/bots, UI/HUD/camera/spectator, persistence/admin/security, and external integrations.
+6. Produce the cross-system integration map, regression matrix, verified defect catalog, and implementation-ready remediation packages.
 
 ## Exact next action
 
-Continue on `docs/architecture-baseline`: inspect the file manifest and likely chat/admin library paths to locate the `COMMANDS` initializer and dispatcher; fetch every file publishing `COMMANDS.*`; enumerate all global/mode `OverrideSpawn` and `OverideSpawnPos` symbols, point-system APIs/consumers and `zb.EndMatch` references; update `PUBLIC_SURFACES.md`, `SYSTEM_CATALOG.md`, affected mode catalogs and this handoff; then continue the organism/fake-ragdoll ownership and replication trace without creating another branch or PR.
+Continue on `docs/architecture-baseline`: fetch the known command/chat/admin library files directly and close the `COMMANDS` registry; fetch the definition and every call of `hg.OverrideSpawn`, all remaining fake/spawn/movement/player-class files, and exact point-system/editor paths; enumerate `OverrideSpawn`, `OverideSpawnPos`, and `zb.EndMatch` repository-wide from the resulting manifest; update `PUBLIC_SURFACES.md`, `SYSTEM_CATALOG.md`, affected mode catalogs/matrices, and this handoff; then continue fake-ragdoll integration into movement, player classes, weapons, vehicles, appearance, camera/spectator, death, and combat without creating another branch or PR.
