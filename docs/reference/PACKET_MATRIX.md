@@ -155,16 +155,16 @@ NPC possession is driven by direct `PlayerButtonDown` server logic rather than a
 | `defense_vote_update` | S -> C | Lua table vote counts | Server authoritative; unversioned table. | `paired`. |
 | `defense_vote_result` | S -> C | `string selectedMode`, Lua table vote counts | Server authoritative. | `paired`. |
 | `defense_show_selected_mode` | S -> C | `string selectedMode` | Server authoritative. | `paired`. |
-| `npc_defense_start` | S -> C | none | Server authoritative. | `paired`. |
-| `npc_defense_prepphase` | S -> C | none | Server authoritative. | Receiver verified in client mode. |
+| `npc_defense_start` | S -> C | none | Server authoritative. | `paired`; duplicate client receivers reset commander hint state. |
+| `npc_defense_prepphase` | S -> C | none | Server authoritative. | `paired`; commander UI also listens for hint display. |
 | `npc_defense_newwave` | S -> C | `float deadline`, `int4 wave` | Server authoritative. | `mismatch`: traced client reads only the float. |
 | `npc_defense_roundend` | S -> C | none | Server authoritative. | `paired`. |
 | `StartWaveMusic` | S -> C | `string soundPath` | Server selects from mode data. | `paired`; client resource/path validation remains presentation concern. |
 | `StopWaveMusic` | S -> C | none | Server authoritative. | `paired`. |
 | `defense_boss_incoming` | S -> C | none | Server authoritative. | Client endpoint exists in large UI file; paired by source inventory. |
-| `defense_highlight_last_npcs` | S -> C | Lua table of entity indices | Sender owner remains to be line-paired. Client resolves and outlines valid entities. | `one-sided` in current trace. |
+| `defense_highlight_last_npcs` | S -> C | Lua table of remaining NPC entity indices | `sv_defense_hooks.lua` broadcasts when tracked count is 1–3 and the list changes or periodic resend is due; client resolves valid entities and outlines them. | `paired`; unversioned Lua table and periodic world-state broadcast. |
 
-### Commander and support channels
+### Commander, support and administration channels
 
 | Channel | Direction | Ordered schema | Validation | Status and defects |
 |---|---|---|---|---|
@@ -172,8 +172,9 @@ NPC possession is driven by direct `PlayerButtonDown` server logic rather than a
 | `defense_commander_menu` | C -> S and S -> C | C -> S: none; S -> C: Lua table `DEFENSE_COMMANDER_ITEMS` | Commander + alive; one-second request and five-second send limits. | `overloaded`, paired. |
 | `defense_commander_purchase` | C -> S | Lua table item requests | Commander + alive + active mode + incapacitation check; raw message length <=8192; table <=20; server item catalog resolution; per-request quantity capped at 10; one-second rate. | `paired`; table shape remains implicit and quantity lower/type bounds need validation. |
 | `defense_commander_notification` | S -> C | `string message`, `int16 pointDelta` | Server authoritative. | `paired`; registered in multiple auxiliary files. |
-| `defense_commander_points` | S -> C | unresolved | Registration located in role file; writer/reader not yet paired. | `one-sided`. |
-| `defense_player_role_assigned` | S -> C | `string role` | Server assigns role. | Client endpoint requires final line pairing. |
+| `defense_commander_points` | none verified | none verified | Network string is registered, but repository search found no writer or reader. Commander points are replicated through `NWInt("CommanderPoints")`. | `registration-only/dormant`. |
+| `defense_player_role_assigned` | S -> C | `string role` | Server sends to assigned Commander from role setup/admin helper; repository search found no client receiver. Clients infer role through `NWString("PlayerRole")`. | `writer-only`; redundant with NWVar state. |
+| `defense_admin_command` | C -> S | `string command`, Lua table `args` | Requires admin/superadmin. Command allowlist is inline (`start_wave`, `end_wave`, `set_wave`, `add_points`); numeric arguments must be positive. No sender located in repository, no table size/type/rate/active-mode guard, and `start_wave` calls `MODE:StartWave(wave)` although the method ignores the argument. | `reader-only/admin trust boundary`. |
 
 ## Crisis Response
 
@@ -238,7 +239,7 @@ Event loot is persisted to `data/zbattle/event_loot/loot_table_<hostname>.txt`; 
 3. Admin queue protocols accept unbounded/untyped Lua tables and overlap across two generations.
 4. Base TDM and HL2DM have guaranteed sender/reader field mismatches.
 5. Counter-Strike winner IDs are encoded as bools.
-6. Defense new-wave writes an unread field; commander purchase/support rely on implicit table/string schemas.
+6. Defense new-wave writes an unread field; commander purchase/admin endpoints rely on implicit Lua-table schemas.
 7. Fear light measurement trusts client-authored samples through a global request slot.
 8. Crisis customization is accepted outside the intended mode/phase/role and persists.
 9. Event loot additions accept weakly validated client data and persist it.
