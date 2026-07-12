@@ -32,6 +32,7 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 
 - [`architecture/PROJECT_SETUP.md`](architecture/PROJECT_SETUP.md) — repository layout, addon/gamemode split, namespaces, subsystem boundaries, persistence, dependencies, and structural risks.
 - [`architecture/BOOTSTRAP_AND_LOAD_ORDER.md`](architecture/BOOTSTRAP_AND_LOAD_ORDER.md) — global addon bootstrap, gamemode bootstrap, Lua realm routing, recursive load order, mode registration, and round startup.
+- [`architecture/ORGANISM_SYSTEM.md`](architecture/ORGANISM_SYSTEM.md) — organism attachment/ownership, canonical state, physiology order, organ hitboxes, damage, replication, fake-ragdoll coupling, defects, and validation.
 
 ### Living catalogs
 
@@ -52,10 +53,10 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 
 ## Dependency-ordered research queue
 
-1. finish exact source-line enumeration for the mode-function and packet matrices and close auxiliary endpoint gaps;
-2. complete loaded-file/realm and global/public API inventories exposed by that trace;
-3. complete round lifecycle and every registered mode integration boundary;
-4. organism, fake-ragdoll, movement, and player-class systems;
+1. close remaining one-sided core/mode packet and hook-name ownership gaps;
+2. finish organism input/medical/client packet consumers and exact lifecycle signatures;
+3. trace fake-ragdoll creation, ownership transfer, input, networking, get-up, death, and combat;
+4. trace movement and player-class consumers of organism/fake state;
 5. weapons, physical bullets, armor, ammunition, and explosives;
 6. inventory, equipment, appearance, and clothing;
 7. NPC and bot architecture;
