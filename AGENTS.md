@@ -13,7 +13,7 @@ This file is the singular source of truth for how every agent works in this repo
 ## Mandatory session startup
 
 1. Read this file.
-2. Read `docs/INDEX.md` and `docs/WORK_PACKAGE.md`.
+2. Read `docs/README.md` and `docs/WORK_PACKAGE.md`.
 3. Inspect the active branch, latest relevant commits, open pull request, validation state, and unresolved handoff items.
 4. State the current work package and ask only questions necessary to resolve the user's desired outcome or creative vision.
 5. Continue from verified repository state without restarting completed analysis or relying on undocumented assumptions.
@@ -22,11 +22,12 @@ This file is the singular source of truth for how every agent works in this repo
 
 - `NecrosisDev/Z-City-Refactored` is the canonical workspace for all agent output.
 - Never commit directly to `main`.
-- Use a focused branch whenever changes can be independently reviewed, validated, reverted, or continued.
-- Keep each work package within a scope the current agent can safely implement and validate; split large goals into dependency-ordered packages rather than reducing the integration target.
+- During the current project-research and documentation-baseline phase, use `docs/architecture-baseline` as the single continuous working branch and PR `#1` as the single review surface. Do not create a branch per work package.
+- Create another branch only when the user explicitly requests it or when implementation/experimentation must be independently reviewed, validated, reverted, or shipped; first confirm that no existing active branch already covers the work.
+- Keep each work package within a scope the current agent can safely complete and validate, but record and continue the next dependency-ordered package on the same research branch until the research baseline is complete.
 - Commit messages must describe both what changed and why it was necessary.
 - Store detailed work, evidence, implementation guidance, decisions, validation, and handoff state in the repository. Chat responses must be TL;DR summaries of no more than two sentences.
-- Do not merge to `main` unless the user explicitly requests or authorizes it.
+- Do not merge to `main` unless the user explicitly requests or authorizes it. Lack of merge authorization is not a blocker to continued research on the active branch.
 
 ## Evidence and knowledge rules
 
@@ -34,7 +35,7 @@ This file is the singular source of truth for how every agent works in this repo
 - Comments and legacy documentation are claims until verified against executable code or reproducible behavior.
 - Mark knowledge as `Verified`, `Inferred`, `Legacy Claim`, or `Planned`; never present inference or intent as current behavior.
 - Maintain lightweight living indexes of systems, behaviors, shared types, ownership, dependencies, initialization order, runtime flow, public contracts, networking, configuration, and integration state.
-- Update affected catalogs and decision records atomically with implementation changes. Do not create speculative entries merely to fill documentation.
+- Update affected catalogs and decision records atomically with research or implementation changes. Do not create speculative entries merely to fill documentation.
 - Prefer compact Markdown and existing repository mechanisms. Add automation, CI, generators, hooks, or runtime systems only when they prevent a demonstrated regression or coordination failure and their maintenance cost is justified.
 
 ## Implementation and handoff depth
@@ -57,7 +58,7 @@ Documentation must be handoff-complete: another capable agent with no chat histo
 - Add or update a regression check for every bug fix and contract change where practical.
 - Before handoff, review adjacent callers, consumers, hooks, network payloads, shared state, load order, persistence, UI, permissions, and compatibility surfaces affected by the change.
 - Do not treat a local pass as integration success. Validation must cover the required layers and interactions for the requested system.
-- Do not bloat the project with duplicate abstractions, reports, registries, or tooling. Extend the smallest authoritative mechanism that closes the demonstrated gap.
+- Do not bloat the project with duplicate abstractions, reports, registries, indexes, or tooling. Extend the smallest authoritative mechanism that closes the demonstrated gap.
 
 ## Continuation and completion
 
