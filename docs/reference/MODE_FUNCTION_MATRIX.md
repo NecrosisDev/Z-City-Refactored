@@ -2,7 +2,7 @@
 
 **Work package:** `WP-RESEARCH-001`  
 **Runtime source baseline:** `429ec928203cec963176dfb6afd086dcdd01c181`  
-**Status:** `partial / catalog-derived from fetched executable source`  
+**Status:** `partial / exact Homicide endpoint batch added`  
 **Reviewed:** 2026-07-12
 
 This is the authoritative cross-mode index for function-valued `MODE` members. The loader registers every function key as a dynamic hook candidate and calls the selected callback as `func(modeTable, ...)`; therefore classification is required before refactoring registration. Rows below contain only functions or function families verified in fetched source/catalog evidence. Missing rows are evidence gaps, not proof that no function exists.
@@ -50,8 +50,12 @@ This is the authoritative cross-mode index for function-valued `MODE` members. T
 | `hmcd` | `SubModes` | data callback | server | returns only `soe`, `standard`, `wildwest`, `gunfreezone` in verified source |
 | `hmcd` | `Intermission` / `RoundStart` / `RoundThink` / `EndRound` | lifecycle | server | broad role, reinforcement, organism, inventory, persistence and packet coupling |
 | `hmcd` | `ShouldStartRoleRound` | data callback/internal helper | server | hard-returns false; configured role-selection workflow unreachable |
+| `hmcd` | `GetActivePlayers` | internal helper | server | returns dead, non-spectator, non-AFK players despite the name; used by reinforcement spawning |
 | `hmcd` | `SpawnPlayers` / `SpawnForce` | internal helper | server | stored on mode and therefore hook-exposed; nil AFK/equipment/state assumptions |
-| `hmcd` | role-selection/status/assistant helpers | network/internal helpers | server | packet endpoints and exact classification remain incomplete |
+| `hmcd` | `EquipSWAT` / `EquipNationalGuard` | internal helper | server | loadout/class helpers stored on `MODE`, therefore registered as generic hook candidates |
+| `hmcd` | `SendTraitorDeathState` | network helper | server | emits appearance name + alive state only to main-traitor recipients |
+| `hmcd` | `StartPlayersRoleSelection` | network/lifecycle helper | server | sends role-selection request and extends start time; upstream predicate hard-disables this path |
+| `hmcd` | role-selection acknowledgement receiver | network endpoint, not `MODE` member | server | removes sender from `ChoosingPlayersList`; no payload; membership is the authorization boundary |
 | `fear` | `AfterBaseInheritance` | lifecycle/assembly callback | shared/server | aliases inherited types; requires `hmcd` to have loaded first |
 | `fear` | `CanLaunch` | data callback | server | hard-disabled; does not prevent direct hooks/timers from loading |
 | `fear` | `Intermission` / `RoundThink` / `ShouldRoundEnd` | lifecycle | server | replaces role/end behavior while calling inherited Homicide `RoundThink` |
@@ -103,6 +107,21 @@ This is the authoritative cross-mode index for function-valued `MODE` members. T
 | `event` | `Intermission` / `RoundStart` / `RoundThink` / `ShouldRoundEnd` / `EndRound` | lifecycle | server | mutable end logic, duplicate loot spawning and delayed winner |
 | `event` | loot load/save/sync/add/remove/request helpers | network/persistence/internal helpers | mixed | unversioned schema, overloaded channel, weak validation and inactive timers |
 | `event` | eventer/admin command callbacks | network/admin helpers | server | command callbacks misuse `args` table as scalar |
+
+## Exact source inventory — Homicide endpoint batch
+
+| Symbol / endpoint | Definition style | Source evidence | Expected arguments / payload | Caller / consumer | Final classification |
+|---|---|---|---|---|---|
+| `MODE:GetActivePlayers()` | method | `gamemodes/zcity/gamemode/modes/homicide/sv_homicide.lua`, blob `af101a8e73b170ca67e5a8c951ec83dd0655e0c8` | none beyond `self`; returns player array | `RoundThink`, delayed SWAT spawn | internal helper; accidental hook surface |
+| `MODE:SpawnForce(teamtype,count)` | method | same blob | team key, bounded requested count; returns spawned count | police/SWAT/National Guard branches | internal helper; accidental hook surface |
+| `MODE:EquipSWAT(ply,index)` | method | same blob | valid spawned player, one-based role index | `SpawnForce("swat",...)` | internal helper; accidental hook surface |
+| `MODE:EquipNationalGuard(ply,index)` | method | same blob | valid spawned player, one-based role index | `SpawnForce("nationalguard",...)` | internal helper; accidental hook surface |
+| `MODE.StartPlayersRoleSelection()` | dot function | same blob | no declared args; dispatcher would inject mode table if hook-run | `RoundStart` only when `ShouldStartRoleRound` succeeds | network/lifecycle helper; currently unreachable and signature-shift exposed |
+| `MODE:SendTraitorDeathState(traitor,is_alive)` | method | same blob | traitor with `CurAppearance`, bool state | death/spawn hooks and status-request response | network helper; accidental hook surface |
+| `HMCD_UpdateTraitorAssistants` client receiver | direct `net.Receive` | `gamemodes/zcity/gamemode/modes/homicide/cl_hud.lua`, blob `87356c1f96336ca160841293500b374dc668d089` | uint8 count then repeated color/name/SteamID | updates `MODE.TraitorsLocal` | endpoint paired; not a mode function |
+| `HMCD_TraitorDeathState` client receiver | direct `net.Receive` | same blob | string appearance name, bool alive | updates assistant status cache | endpoint paired; not a mode function |
+
+Line-precise offsets remain required for the complete source inventory. Blob + symbol evidence above closes endpoint identity and behavior but is not treated as completion of the all-mode line-enumeration requirement.
 
 ## Highest-priority collision groups
 
