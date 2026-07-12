@@ -34,6 +34,9 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 - [`architecture/BOOTSTRAP_AND_LOAD_ORDER.md`](architecture/BOOTSTRAP_AND_LOAD_ORDER.md) — global addon bootstrap, gamemode bootstrap, Lua realm routing, recursive load order, mode registration, and round startup.
 - [`architecture/ORGANISM_SYSTEM.md`](architecture/ORGANISM_SYSTEM.md) — organism attachment/ownership, canonical state, physiology order, organ hitboxes, damage, replication, fake-ragdoll coupling, defects, and validation.
 - [`architecture/FAKE_RAGDOLL_SYSTEM.md`](architecture/FAKE_RAGDOLL_SYSTEM.md) — custom ragdoll creation, ownership, networking, active physics control, death/get-up, vehicles, camera/render, integration risks, and validation.
+- [`architecture/MOVEMENT_SYSTEM.md`](architecture/MOVEMENT_SYSTEM.md) — prediction, speed/inertia/jump calculation, organism/class/weapon modifiers, animation, footsteps, fake transitions, and validation.
+- [`architecture/PLAYER_CLASS_SYSTEM.md`](architecture/PLAYER_CLASS_SYSTEM.md) — class registry, lifecycle, transport, concrete class capabilities, organism/movement/fake integration, security defects, and migration boundaries.
+- [`architecture/CHARACTER_RUNTIME_INTEGRATION.md`](architecture/CHARACTER_RUNTIME_INTEGRATION.md) — combined authority graph and lifecycle for organism, fake-ragdoll, movement, and player classes.
 
 ### Living catalogs
 
@@ -54,16 +57,13 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 
 ## Dependency-ordered research queue
 
-1. finish remaining fake-ragdoll weapon, vehicle, control, packet and hook consumers;
-2. trace movement ownership and its organism/fake dependencies;
-3. trace player-class modifiers, lifecycle and reset contracts;
-4. build the combined organism/fake/movement/class integration graph;
-5. weapons, physical bullets, armor, ammunition, and explosives;
-6. inventory, equipment, appearance, and clothing;
-7. NPC and bot architecture;
-8. UI, HUD, camera, spectator, and screen effects;
-9. persistence, administration, security, and external integrations;
-10. cross-system integration map, regression risks, and implementation-ready remediation packages.
+1. weapons, physical bullets, ammunition, armor, explosives, and ragdoll-combat interfaces;
+2. inventory, equipment, appearance, and clothing ownership across round/class/fake transitions;
+3. NPC and bot architecture, including organism, faction, bullseye, fake-body, and mode consumers;
+4. UI, HUD, camera, spectator, and screen effects;
+5. persistence, administration, security, and external integrations;
+6. runtime load-order/hook/packet/performance instrumentation;
+7. cross-system regression matrix, verified defect catalog, and implementation-ready remediation packages.
 
 ## Maintenance rules
 
