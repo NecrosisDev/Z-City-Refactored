@@ -40,8 +40,40 @@ Produce a self-contained, implementation-ready knowledgebase of the current proj
   - `RequestGameQueue` is registration-only;
   - `SendGameQueue`, `QueueEmptiedNotification`, and `QueueModifiedNotification` are legacy writer-only channels with no current manager receivers.
 - The active `ZB_*` round-list protocol uses `zb.RoundList`; the legacy queue generation uses separate `zb.QueuedModes`, duplicate handlers and duplicate synchronization functions.
-- Initial spawn and fallback ownership is partially source-located in `gamemode/init.lua`: map `Spawnpoint` records precede broad entity-class fallback; global `OverrideSpawn` and mode `CurrentRound().OverrideSpawn` are separate gates.
 - Verified round emitters are `ZB_PreRoundStart`, `TTTPrepareRound`, `ZB_StartRound`, and `ZB_EndRound` in `libraries/sv_roundsystem.lua`.
+- Organism initialization, attachment, major state groups, module order, primary damage flow and `organism_send` replication are source-traced in `docs/architecture/ORGANISM_SYSTEM.md` and the catalogs.
+
+## Newly verified framework ownership
+
+### Spawn selection and overrides
+
+- `gamemodes/zcity/gamemode/init.lua:getRandSpawn` rebuilds a realm-local `spawners` array at load and `InitPostEntity`.
+- Map points named `Spawnpoint` are authoritative when at least one exists. Only when none exist does the code collect `info_player_start` plus the broad `default_spawns` class list.
+- `zb:GetRandomSpawn` and `zb:FurthestFromEveryone` fall back to the cached `spawners` table when no explicit choices are supplied.
+- `GM:PlayerSpawn` checks the undeclared global `OverrideSpawn` first and returns immediately when truthy. This suppresses all normal view/spectate/movement/team/appearance handling in that function.
+- The separate mode member `CurrentRound().OverrideSpawn` only suppresses the default team and appearance reassignment block; it does not return from `GM:PlayerSpawn`.
+- These names therefore represent two distinct contracts despite sharing the same spelling. The global is not mode-scoped and must be traced across fake-ragdoll/respawn callers for leakage and cleanup.
+- The requested misspelling `OverideSpawnPos` remains unresolved and must be searched across every known source path before absence can be claimed.
+
+### Map-point consumers
+
+- `Spawnpoint` points feed the primary random-spawn cache.
+- `RandomSpawns` points feed `zb.GetWorldSize`; the function computes the maximum squared pairwise point distance and returns its square root. With fewer than two useful points it returns zero, affecting `ForBigMaps` mode availability.
+- Team spawning calls `CurrentRound():GetTeamSpawn()` and substitutes one random spawn for either empty team list.
+- Objective/extraction point APIs remain to be enumerated from the point-system owner and all mode/entity consumers.
+
+### Round termination
+
+- `zb:EndRound()` in `gamemodes/zcity/gamemode/libraries/sv_roundsystem.lua` is the verified core termination entry. It sets state `3`, increments round count, broadcasts `RoundInfo`, invokes the current mode's `EndRound`, emits `ZB_EndRound`, sends `FadeScreen`, and saves achievements.
+- `GM:PlayerInitialSpawn` calls `zb:EndRound()` after creating a temporary bot when the first player joins.
+- No `zb.EndMatch` definition or call exists in the two verified core ownership files (`gamemode/init.lua` and `libraries/sv_roundsystem.lua`). Repository-wide absence is not yet proven because connector code search is timing out; mode/entity files must still be checked directly.
+
+### COMMANDS publisher evidence
+
+- `libraries/sv_roundsystem.lua` publishes `COMMANDS.bigmap = {handler, 0}` without initializing `COMMANDS` locally.
+- The handler performs its own `ply:IsAdmin()` check, parses `args[1]` with `tonumber`, mutates `ZBATTLE_BIGMAP`, rerolls chances, and persists `data/zbattle/mapsizes.json`.
+- A missing/non-numeric argument can assign `nil`, then string concatenation and later comparisons can fail. The trailing `0` is an unresolved framework field until the registry/dispatcher owner is located.
+- Registry initialization, chat/console parser, dispatch semantics, generic permission/cooldown enforcement, realm exposure, collision behavior and all additional publishers remain unresolved.
 
 ## High-impact verified findings
 
@@ -54,6 +86,8 @@ Produce a self-contained, implementation-ready knowledgebase of the current proj
 - Round administration contains overlapping protocols, duplicate name-keyed registrations, weak client-table validation and two divergent queue-state tables.
 - `FadeScreen` is currently an unconsumed writer, while end-round fading is also implemented through `RoundInfo` client state and server `Player:ScreenFade` calls.
 - `GM:PlayerInitialSpawn` can spawn a temporary bot and force `zb:EndRound()` when the first player joins, coupling population bootstrap to lifecycle transitions.
+- Spawn behavior is controlled by both an undeclared global `OverrideSpawn` and a mode-table member of the same name with materially different effects.
+- Big-map eligibility depends on `RandomSpawns` map-point coverage rather than BSP/world bounds.
 
 ### Function and packet matrices
 
@@ -65,16 +99,16 @@ Produce a self-contained, implementation-ready knowledgebase of the current proj
 
 ## Current bounded trace
 
-Finish framework command, spawn, point and lifecycle ownership, then begin organism initialization/state/replication using the completed mode and packet matrices as consumer maps.
+Close the unresolved framework command registry and remaining spawn/point/lifecycle symbols, then continue organism-to-fake-ragdoll ownership integration.
 
 ### Required outputs
 
-1. Locate the `COMMANDS` registry initializer, parser, dispatcher, permission/cooldown semantics and all publishers; classify collisions and realm exposure.
-2. Trace every `OverrideSpawn` and misspelled `OverideSpawnPos` producer/consumer, including whether globals leak between modes or rounds.
-3. Trace map-point storage/load APIs and every fallback path used by spawn, objective and extraction systems.
-4. Locate every `zb.EndMatch` definition/call or prove it absent; distinguish it from verified `zb:EndRound()`.
-5. Complete Pathowogen Derma/end-report and inactive-mode direct-hook audit.
-6. Begin organism ownership: initialization, entity/player attachment, state schema, damage/medical lifecycle, replication, fake-ragdoll integration and mode consumers.
+1. Locate the `COMMANDS` registry initializer, parser, dispatcher, permission/cooldown semantics and every publisher; classify collisions and realm exposure.
+2. Enumerate every global `OverrideSpawn` assignment/read and every mode-table `OverrideSpawn`; establish setup/reset lifetime and cross-round leakage.
+3. Locate every `OverideSpawnPos` spelling or prove repository-wide absence from fetched sources.
+4. Trace map-point storage/load/edit APIs and every spawn, objective, extraction, world-size and UI consumer.
+5. Locate every `zb.EndMatch` definition/call or prove repository-wide absence; distinguish all call sites from `zb:EndRound()`.
+6. Finish organism input/medical/effect writers, then trace fake-ragdoll creation, ownership transfer, input, networking, get-up, death and combat.
 7. Update existing catalogs/reference files only; do not create duplicate indexes, branches or PRs.
 
 ## Validation requirements
@@ -91,21 +125,22 @@ Finish framework command, spawn, point and lifecycle ownership, then begin organ
 
 - Static source cannot prove total startup order, unsorted enumeration order, inactive-hook execution or effective duplicate overwrite behavior; temporary runtime instrumentation is required later.
 - Recursive path enumeration remains incomplete because connector code search and directory listing are unreliable; discovery continues through known paths, indexed results and fetched executable files.
+- GitHub code search timed out repeatedly during this trace, so repository-wide negative claims for `COMMANDS`, `OverideSpawnPos`, `zb.EndMatch` and override publishers remain open.
 - Some matrix rows are symbol/blob-complete rather than original line-offset complete.
 - No dedicated-server smoke-test evidence has been captured.
 - One-sided/dormant packet names must be checked against external addons before removal.
-- `FadeScreen` receiver absence is repository-complete for the traced baseline, not proof that no workshop addon consumes the channel.
 - Documented defects must not be patched until adjacent contracts and integration boundaries are mapped.
 
 ## Dependency-ordered continuation
 
-1. Trace `COMMANDS`, spawn overrides, map points, `zb.EndMatch` and lifecycle consumers.
-2. Complete Pathowogen client/inactive-mode boundaries.
-3. Trace organism, fake-ragdoll, movement and player classes.
-4. Continue through combat/weapons/explosives, inventory/equipment/appearance, NPC/bots, UI/camera/spectator and persistence/admin/security/integrations.
-5. Produce the cross-system integration map, regression matrix, verified defect catalog and implementation-ready remediation packages.
-6. Begin implementation only after research defines boundaries and the user approves transition.
+1. Fetch likely command/chat framework files and all known command-publishing mode files directly; close `COMMANDS` ownership without relying on code search.
+2. Fetch fake-ragdoll and round/spawn files to enumerate global `OverrideSpawn` lifetime and organism transfer.
+3. Fetch point-system/editor files and each objective/extraction consumer.
+4. Complete Pathowogen client/inactive-mode boundaries.
+5. Continue through fake-ragdoll, movement and player classes, then combat/weapons/explosives, inventory/equipment/appearance, NPC/bots, UI/camera/spectator and persistence/admin/security/integrations.
+6. Produce the cross-system integration map, regression matrix, verified defect catalog and implementation-ready remediation packages.
+7. Begin implementation only after research defines boundaries and the user approves transition.
 
 ## Exact next action
 
-Continue on `docs/architecture-baseline`: locate the `COMMANDS` registry owner/dispatcher and all command publishers; enumerate all `OverrideSpawn`/`OverideSpawnPos`, map-point and `zb.EndMatch` definitions/callers; update `PUBLIC_SURFACES.md`, `SYSTEM_CATALOG.md`, affected mode catalogs and this handoff; then begin organism initialization, attachment and replication tracing without creating another branch or PR.
+Continue on `docs/architecture-baseline`: inspect the file manifest and likely chat/admin library paths to locate the `COMMANDS` initializer and dispatcher; fetch every file publishing `COMMANDS.*`; enumerate all global/mode `OverrideSpawn` and `OverideSpawnPos` symbols, point-system APIs/consumers and `zb.EndMatch` references; update `PUBLIC_SURFACES.md`, `SYSTEM_CATALOG.md`, affected mode catalogs and this handoff; then continue the organism/fake-ragdoll ownership and replication trace without creating another branch or PR.
