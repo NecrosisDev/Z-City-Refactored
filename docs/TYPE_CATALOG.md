@@ -6,117 +6,139 @@ Shared contracts are recorded only after confirming definitions and multiple con
 
 - **Kind:** table/namespace.
 - **Authority/owner:** `SYS-BOOTSTRAP-GLOBAL` initializes the table; loaded subsystems extend it.
-- **Definition paths:** `lua/autorun/loader.lua` initializes `hg = hg or {}` and writes bootstrap metadata/state.
-- **Verified bootstrap fields:** `Version: string`; `GitHub_ReposOwner: string`; `GitHub_ReposName: string`; `loaded: boolean` during/after the main load path.
-- **Consumers:** All addon/gamemode systems using the global `hg` namespace; complete consumer inventory pending.
-- **Realm/transport:** Independent server/client global tables; no automatic table replication. Individual fields/services may network separately.
-- **Invariants:** Existing table is reused; `loaded` is set false before the main recursive include and true before `HomigradRun`, except the `ixhl2rp` early-return path leaves it false.
-- **Compatibility rules:** Additive names must avoid collisions; code must not assume the entire namespace exists before `HomigradRun`; realm-specific members require guards.
-- **Validation:** Runtime snapshot immediately before loader, during includes, at `HomigradRun`, and at `InitPostEntity` on server/client.
+- **Definition paths:** `lua/autorun/loader.lua`.
+- **Verified bootstrap fields:** `Version`, repository owner/name, `loaded`.
+- **Realm/transport:** independent server/client globals.
+- **Invariants:** existing table reused; `loaded` false before main include and true before `HomigradRun`, except ixhl2rp early return.
+- **Compatibility/validation:** additive names must avoid collisions; runtime snapshots at bootstrap phases.
 - **Related:** `SYS-BOOTSTRAP-GLOBAL`, `BEH-REALM-GLOBAL`.
-- **Last verified:** `lua/autorun/loader.lua` blob `c250ed9129cfc61ef43c1ee0bb6c0fde0a0d53e5`, 2026-07-12.
+- **Last verified:** blob `c250ed9129cfc61ef43c1ee0bb6c0fde0a0d53e5`, 2026-07-12.
 
 ## `TYPE-MODE-REGISTRY` — `zb.modes` and `zb.modesHooks`
 
 - **Kind:** registry.
 - **Authority/owner:** `SYS-MODE-REGISTRY`.
-- **Definition paths:** `gamemodes/zcity/gamemode/loader.lua` initializes and writes both registries.
 - **Shape:** `zb.modes[modeName] -> TYPE-MODE-TABLE`; `zb.modesHooks[modeName][hookName] -> function`.
-- **Consumers:** Mode loader/dispatcher, server round resolver/selection, client `CurrentRound`, UI/admin mode inventory, and all mode-dependent systems.
-- **Realm/transport:** Separate server/client registries assembled from realm-routed source; registry tables are not directly networked.
-- **Invariants:** Mode key is `MODE.name`; `zb.modes` survives loader hotloads when already present; `zb.modesHooks` is reset each loader execution; selected mode lookup falls back through `zb.CROUND_MAIN`, `zb.CROUND`, then `tdm` in dispatch.
-- **Compatibility rules:** Mode names and hook/member names are public identifiers; renaming breaks saved chances, round lists, commands, net/UI references, and dispatch. Server/client mode registration must remain compatible for `RoundInfo` names.
-- **Validation:** Compare server/client key sets and selected function sets after startup and hotload; report missing/extra modes and hooks.
-- **Related:** `SYS-MODE-REGISTRY`, `BEH-MODE-DISPATCH`, `TYPE-MODE-TABLE`.
-- **Last verified:** `loader.lua` blob `b1754dff2d53012a05cb109f26b75eae118b14ce`, 2026-07-12.
+- **Realm:** separate server/client registries.
+- **Invariants:** key is `MODE.name`; modes persist across hotload, hook table resets; dispatch fallback main/current/tdm.
+- **Compatibility:** IDs and function names are public identifiers used by persistence, packets, UI and hooks.
+- **Validation:** compare realm key/callback sets after startup/hotload.
+- **Related:** `SYS-MODE-REGISTRY`, `TYPE-MODE-TABLE`, `BEH-MODE-DISPATCH`.
+- **Last verified:** loader blob `b1754dff2d53012a05cb109f26b75eae118b14ce`, 2026-07-12.
 
 ## `TYPE-MODE-TABLE` — Registered mode definition
 
 - **Kind:** extensible table/object contract.
-- **Authority/owner:** Each mode source populates temporary global `MODE`; `SYS-MODE-REGISTRY` finalizes and stores it.
-- **Definition paths:** all `gamemodes/zcity/gamemode/modes/**`; registration/consumers traced in `loader.lua`, `sv_roundsystem.lua`, and `cl_init.lua`.
-- **Registration-required:** `name: string` is used as the registry key and network-visible current mode identifier. A completely empty table is skipped.
-- **Registry-managed:** `saved: table` is preserved across hotload and reset during round preparation; inherited tables may be copied; every function-valued member is added to mode-hook dispatch.
-- **Verified optional metadata:** `base: mode name`; `PrintName`; `Description`; `Types: table`; `Type`; `Chance`; `ForBigMaps`; `SubModes`; timing values such as `start_time`/`end_time`; `shouldfreeze`.
-- **Verified optional callbacks:** `AfterBaseInheritance`, `SetupChances`, `CanLaunch`, `ChanceFunction`, `RoundStart`, `RoundStartPost`, `RoundThink`, `ShouldRoundEnd`, `BoringRoundFunction`, `EndRound`, `Intermission`, `GiveEquipment`, `DontKillPlayer`. The complete known function surface is now classified in `reference/MODE_FUNCTION_MATRIX.md`.
-- **Realm/transport:** Separate tables execute in their routed realms; only the mode name/state and selected supporting data are networked, not the table itself.
-- **Invariants:** Base mode must already be registered before inheritance; server/client definitions for a mode name must be compatible; function names participate in global hook dispatch even when intended as helpers.
-- **Compatibility rules:** Additive data fields are generally safe if names do not collide with hook names; function additions can create new hook registrations; renaming/removing lifecycle functions or mode IDs is breaking; nested inherited tables require copy/ownership review.
-- **Validation:** Compare registry schemas, absent consumer-assumed callbacks, unresolved bases, server/client differences, duplicate names, function/hook collisions and mutable table aliasing.
-- **Related:** `SYS-MODE-REGISTRY`, `SYS-ROUND-LIFECYCLE`, `BEH-MODE-DISPATCH`, `BEH-MODE-SELECTION`.
-- **Last verified:** loader blob `b1754dff2d53012a05cb109f26b75eae118b14ce`; round blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`; client blob `fa61811ef802529d54abe2cf1cc72a936ba15590`; 2026-07-12.
+- **Authority/owner:** mode source populates temporary `MODE`; registry finalizes/stores it.
+- **Registration-required:** `name`; empty table skipped.
+- **Registry-managed:** `saved`; inherited tables; every function-valued member is hook-dispatched.
+- **Verified metadata/callbacks:** IDs, base, display/description, Types/Type, chances/map size, timing/freezing and lifecycle/data/helper functions classified in `reference/MODE_FUNCTION_MATRIX.md`.
+- **Realm:** separate tables; mode ID/state and selected data networked, not table.
+- **Compatibility:** function additions create global hook names; renames/removals break dispatch/persistence/transport.
+- **Validation:** realm schema parity, bases, duplicate names, collisions and mutable aliases.
+- **Related:** mode/round systems and behavior.
+- **Last verified:** loader/round/client blobs in matrix, 2026-07-12.
 
 ## `TYPE-ROUND-STATE` — Round lifecycle state identifier
 
-- **Kind:** integer identifier/state machine.
-- **Authority/owner:** Server `SYS-ROUND-LIFECYCLE`; clients mirror it.
-- **Definition paths:** server `sv_roundsystem.lua`; client `cl_init.lua`.
-- **Verified values:** `0 = pre-round/intermission`, `1 = active round`, `3 = end-round period`.
-- **Transport:** `RoundInfo` sends the value with `net.WriteInt(value, 4)`; client reads `net.ReadInt(4)` into `zb.ROUND_STATE`.
-- **Consumers:** Server lifecycle gates, chat-listening rule, mode callbacks, client fade/presentation and client-side mode callbacks.
-- **Invariants:** Server is authoritative; state transitions traced are `0 -> 1 -> 3 -> 0`; clients must not infer authority from local callbacks.
-- **Legacy claim:** Client comment states `2 = endround`; executable source uses `3` on both server and client branches.
-- **Compatibility rules:** Reassigning numeric values is network- and behavior-breaking; adding states requires auditing all equality checks, payload width/sign semantics, hooks, UI, and mode code.
-- **Validation:** Record server transitions and every client-received payload through a full cycle, late join, admin end, timeout, and changelevel/coop path.
-- **Related:** `SYS-ROUND-LIFECYCLE`, `BEH-ROUND-CYCLE`, `TYPE-ROUNDINFO-PAYLOAD`.
-- **Last verified:** server blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`; client blob `fa61811ef802529d54abe2cf1cc72a936ba15590`; 2026-07-12.
+- **Kind:** signed four-bit integer/state machine.
+- **Authority:** server; client mirror through `RoundInfo`.
+- **Values:** `0` pre-round, `1` active, `3` end.
+- **Legacy claim:** comments/listeners using `2` are stale.
+- **Compatibility:** numeric reassignment/addition is breaking.
+- **Validation:** full cycle, late join, admin end, timeout and CO-OP/changelevel.
+- **Related:** `SYS-ROUND-LIFECYCLE`, `TYPE-ROUNDINFO-PAYLOAD`.
+- **Last verified:** server `324491...`, client `fa6181...`, 2026-07-12.
 
-## `TYPE-ROUNDINFO-PAYLOAD` — Current round synchronization message
+## `TYPE-ROUNDINFO-PAYLOAD` — Current round synchronization
 
 - **Kind:** ordered network payload.
-- **Authority/owner:** Server `SYS-ROUND-LIFECYCLE` writes; client round receiver reads.
-- **Definition paths:** server `sv_roundsystem.lua`; client `cl_init.lua`.
-- **Channel:** `RoundInfo` registered server-side with `util.AddNetworkString`.
-- **Ordered fields:** `1. modeName: string`; `2. roundState: signed 4-bit integer`.
-- **Send conditions:** round start, round end, end-to-pre-round transition, and `PlayerInitialSpawn` when `zb.CROUND` exists.
-- **Client effects:** emits `RoundInfoCalled`, updates local mode/state, applies fade and invokes local mode lifecycle callbacks.
-- **Invariants:** Field order and bit width must match exactly; mode names must exist clientside; server remains authoritative.
-- **Compatibility rules:** Any field insertion/reordering/type/width change is breaking unless both sender and receiver migrate atomically.
-- **Validation:** Packet capture/log wrapper comparing writes/reads, late join state, unknown mode name, each valid state and repeated broadcasts.
-- **Related:** `SYS-ROUND-LIFECYCLE`, `BEH-ROUND-CYCLE`, `TYPE-MODE-REGISTRY`, `TYPE-ROUND-STATE`.
-- **Last verified:** server blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`; client blob `fa61811ef802529d54abe2cf1cc72a936ba15590`; 2026-07-12.
+- **Channel:** `RoundInfo`.
+- **Fields:** `string modeName`; `int4 roundState`.
+- **Authority:** server; client stores state and invokes local transitions.
+- **Compatibility:** field order/type/width and client mode ID must match.
+- **Validation:** packet capture and unknown mode/state handling.
+- **Related:** round system/behavior/types.
+- **Last verified:** server/client round blobs, 2026-07-12.
 
-## `TYPE-ROUND-QUEUE` — Future mode list and forced-mode admin contract
+## `TYPE-ROUND-QUEUE` — Future and legacy queue contracts
 
-- **Kind:** registry/list plus network payload family.
-- **Authority/owner:** Server `SYS-ROUND-LIFECYCLE`.
-- **Definition paths:** `sv_roundsystem.lua`; client/admin consumers partially traced.
-- **Server fields:** `zb.RoundList: array<string>`; `zb.nextround: string|nil`; `zb.QueuedModes: array<string>`; `zb_forcemode: string convar` using `random` as disabled state.
-- **Verified messages:** server-to-admin `ZB_SendRoundList` writes table, next-round string, force-mode string; client-to-server `ZB_UpdateRoundList` reads table then boolean; overlapping legacy queue protocols remain.
-- **Invariants:** Entries should resolve through mode/submode registries; non-empty replacement removes its first entry into `zb.nextround`; empty input rerolls; force mode overrides random selection.
-- **Trust/validation:** Admin checks exist, but client tables lack shape/length/ID/duplicate bounds and overlapping receivers make effective behavior runtime-dependent.
-- **Compatibility rules:** Validate/bound tables, preserve mode IDs, and migrate every admin client atomically.
-- **Validation:** Fuzz payloads, verify unauthorized rejection, deterministic order, force reset and synchronization.
-- **Related:** `SYS-ROUND-LIFECYCLE`, `BEH-MODE-SELECTION`, `TYPE-MODE-REGISTRY`.
-- **Last verified:** server blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`, 2026-07-12.
+- **Kind:** arrays plus network payload families.
+- **Authority:** server.
+- **Fields:** active `zb.RoundList`; next mode; legacy `zb.QueuedModes`; force-mode convar.
+- **Transport:** active `ZB_SendRoundList`/`ZB_UpdateRoundList`; overlapping legacy admin queue family.
+- **Invariants:** IDs should resolve; active and legacy lists are distinct models.
+- **Trust:** admin checks exist; incoming tables lack strong bounds/schema/ID validation.
+- **Validation:** fuzz, permission, deterministic order and synchronized migration.
+- **Related:** round selection and packet matrix.
+- **Last verified:** round blob `324491...`, 2026-07-12.
 
 ## `TYPE-ORGANISM-STATE` — Authoritative physiological state table
 
 - **Kind:** mutable extensible table/state machine.
-- **Authority/owner:** Server `SYS-ORGANISM`; one table may be shared by player, fake ragdoll and death ragdoll.
-- **Definition paths:** `organism/tier_0/sv_tier_0.lua` creates identity fields; `tier_1/sv_organism.lua` resets canonical fields; modules, damage, modes, classes, weapons and medical systems extend/mutate it.
-- **Required identity:** `owner: Entity`, `ownerX: Entity`; registry ownership through `hg.organism.list[entity]`.
-- **Verified state groups:** lifecycle; consciousness/control; cardiovascular; respiratory; pain/drugs; movement/energy; bones/organs; limbs/dislocations/amputations; wounds; environment/metabolism; mode/class extensions; replication timing.
-- **Nested structures:** stamina table; O2 table; left/right lung tables; wound/arterial-wound arrays; damage stack; lodged entities; optional mode/integration tables.
-- **Lifecycle:** `Add` creates/attaches; `Org Clear` resets in place; `Org Transfer` changes owner; fake/death ragdolls can alias the same table; entity removal clears registry entry.
-- **Invariants:** exactly one authoritative owner generation should exist; `owner.organism` must reference the table; required module fields must exist before the 10 Hz tick; client copies are non-authoritative.
-- **Current compatibility issue:** There is no explicit schema/version/extension registry. Fields are duplicated across reset, replication, client interpolation and external consumers.
-- **Validation:** Generate runtime schemas after clear and during each owner transition; reject missing/wrong-type fields; compare mode/class extensions; test aliasing and delayed callbacks.
-- **Related:** `SYS-ORGANISM`, `BEH-ORGANISM-LIFECYCLE`, `TYPE-ORGANISM-SNAPSHOT`.
-- **Last verified:** Tier 0 blob `1b8a72186b295f3542dd90d92374d5985d7d6e62`; Tier 1 blob `4830503722f005d27373047d8db5c58d4e217559`; 2026-07-12.
+- **Authority:** server `SYS-ORGANISM`; one table may be shared by player, fake ragdoll and death ragdoll.
+- **Required identity:** `owner`, `ownerX`; registry through `hg.organism.list`.
+- **State groups:** lifecycle; consciousness/control; cardiovascular; respiratory; pain/drugs; movement/energy; bones/organs; limbs; wounds; metabolism/environment; mode/class extensions; replication timing.
+- **Nested structures:** stamina, O2, lungs, wounds, damage stack, lodged entities and optional extensions.
+- **Lifecycle:** Add, clear in place, owner transfer and ragdoll aliasing.
+- **Invariants:** one authoritative owner generation; required fields before 10 Hz tick; client copies non-authoritative.
+- **Compatibility issue:** no explicit schema/version/extension registry; duplicated across reset/replication/interpolation/consumers.
+- **Validation:** runtime schema and owner-transition assertions.
+- **Related:** `SYS-ORGANISM`, organism behavior/snapshot.
+- **Last verified:** Tier 0 `1b8a...`, Tier 1 `483050...`, 2026-07-12.
 
-## `TYPE-ORGANISM-SNAPSHOT` — `organism_send` replication payload
+## `TYPE-ORGANISM-SNAPSHOT` — `organism_send`
 
-- **Kind:** ordered header plus unversioned Lua-table payload.
-- **Authority/owner:** Server `SYS-ORGANISM`; client receiver in `tier_1/cl_statistics.lua`.
-- **Channel:** `organism_send`.
-- **Ordered fields:** `1. table snapshot`; `2. bool force`; `3. bool spectatorProtection`; `4. bool moreInfo`; `5. bool add/merge`.
-- **Snapshot variants:** owner/full-field whitelist; PVS/bare whitelist; developer-mode entire organism table; immediate partial merge tables.
-- **Send cadence:** generally one second for living players/owner snapshots and one to three seconds for nearby observer snapshots, plus damage/event-triggered sends.
-- **Client behavior:** reads owner from table, creates/merges old/new state, optionally replaces on `force`, and mirrors copies to fake ragdoll for interpolation/presentation.
-- **Trust/privacy:** Server authoritative but table shape/version is implicit; PVS observers receive sensitive physiology fields; developer mode can expose arbitrary extension data.
-- **Known defects:** client method call on owner before `IsValid`; copies existing state before confirming it exists; Lua-table cost scales with organism count; partial/full semantics are represented by booleans rather than explicit message variants; wounds also travel through NetVars.
-- **Compatibility rules:** Any field/type/branch change can break interpolation/UI; future migration requires versioned payload and public/private field sets.
-- **Validation:** Packet capture for every branch, invalid owner/table tests, size/cadence population tests, PVS/spectator exposure and compatibility replay.
-- **Related:** `SYS-ORGANISM`, `TYPE-ORGANISM-STATE`, `reference/PACKET_MATRIX.md`.
-- **Last verified:** server blob `4830503722f005d27373047d8db5c58d4e217559`; client blob `c3c5db65d44125a2acf5df4be1b6fe13d891a86f`; 2026-07-12.
+- **Kind:** unversioned Lua table plus ordered branch booleans.
+- **Authority:** server; client reader `cl_statistics.lua`.
+- **Fields:** table; force; spectator protection; more info; add/merge.
+- **Variants:** owner whitelist, observer whitelist, developer whole table and partial merge.
+- **Cadence:** about one second owner/player and one-to-three seconds observer/non-player, plus event sends.
+- **Client behavior:** replaces/merges old/new state and mirrors to fake ragdoll.
+- **Risks:** invalid owner ordering, implicit schema, PVS privacy, developer exposure and population cost.
+- **Compatibility:** future versioned public/private deltas required.
+- **Validation:** capture every branch, invalid shapes, cadence/size/privacy/replay.
+- **Related:** organism system/state and packet matrix.
+- **Last verified:** server `483050...`, client `c3c5db...`, 2026-07-12.
+
+## `TYPE-FAKE-RAGDOLL-STATE` — Player/body ownership and transition state
+
+- **Kind:** distributed entity-reference state machine.
+- **Authority:** server `SYS-FAKE-RAGDOLL`; clients reconstruct a mirror through NWEntities, custom packet/index and proxies.
+- **Server surfaces:** `ply.FakeRagdoll`, `FakeRagdollOld`, `OldRagdoll`, `RagdollDeath`; `hg.ragdollFake[player]`; `ragdoll.ply`; NWEntities `FakeRagdoll`, `FakeRagdollOld`, `RagdollDeath`, ragdoll NWEntity `ply`; PVS/vehicle/constraint maps.
+- **Client surfaces:** mirrored player fields, camera `follow`, ragdoll `ply`/`organism`, `ragdoll_index`/`prevragdoll_index`, `hg.ragdolls`, render/camera transition state.
+- **Conceptual states:** standing, entering fake, active fake, unconscious fake, getting up, dead/death-ragdoll. Current code represents these implicitly through entity validity, organism booleans, timers and transient globals rather than one enum.
+- **Ownership invariant:** all references and organism owner must identify one body generation; the player and current body may share one organism table.
+- **Transition writers:** `hg.Fake`, `hg.FakeUp`, death hooks, ragdoll removal, disconnect, vehicle hooks, organism fake/unconscious logic and client NWVar proxies.
+- **Known conflicts:** no generation/token; packet/NW/proxy order; NULL versus removed/adopted/death body ambiguity; old body aliases; respawn-based get-up; timer/entity-index reuse.
+- **Compatibility:** changing a field/hook/NWEntity requires atomically migrating server physics, organism, camera, render, spectator, weapons, vehicles and death behavior.
+- **Validation:** state-machine trace with generation assertions across every lifecycle/failure/latency path.
+- **Related:** `SYS-FAKE-RAGDOLL`, `BEH-FAKE-RAGDOLL-LIFECYCLE`, `TYPE-FAKE-RAGDOLL-PAYLOAD`.
+- **Last verified:** server Tier 0 `0fa522db3f0562eaf1816d6452fa082aef81d2bb`; client `bdd7e6a215da568a2070bd9b33e29244f1970f90`; 2026-07-12.
+
+## `TYPE-FAKE-RAGDOLL-PAYLOAD` — `Player Ragdoll`
+
+- **Kind:** ordered network payload with external reader dependency.
+- **Authority:** server fake lifecycle.
+- **Ordered fields:** `entity player`; `entity ragdollOrNull`.
+- **Writers:** fake enter/adoption/get-up/death/removal helpers broadcast through `NET_Fake`, `NET_Fake2` and `NET_Up`.
+- **Client reader:** calls `net.ReadEntity()` then custom/undefined `net.ReadEntity2()` and expects it to return both entity and numeric index; only the index is stored.
+- **Primary ownership transport:** NWEntity proxies for `FakeRagdoll`/`RagdollDeath` perform actual client ownership/render/camera changes, making this packet an overlapping index/presentation path.
+- **Risks:** no sequence/generation/transition type; undefined helper behavior; order relative to entity creation/PVS/NW updates; duplicate sends; NULL ambiguity.
+- **Compatibility:** either formalize `ReadEntity2` and version/generate transitions or remove packet only after proving proxies/indices cover all consumers.
+- **Validation:** bit/return behavior, latency/reorder/late join/PVS, duplicate/NULL/adopted/death/get-up transitions.
+- **Related:** fake state, system and packet matrix.
+- **Last verified:** server `0fa522db3f0562eaf1816d6452fa082aef81d2bb`; client `bdd7e6a215da568a2070bd9b33e29244f1970f90`; 2026-07-12.
+
+## `TYPE-FAKE-CONTROL-STATE` — Active-ragdoll physics/control data
+
+- **Kind:** transient distributed control state.
+- **Authority:** server Think loop, sourced from player buttons/view, organism, weapon, constraints and ragdoll physics.
+- **Representative fields:** ragdoll `power`, `dtime`, hand constraints/cooldowns, stamina modifiers, choking/fire/weld state, bullseye; player last-fake/jump/freemove/weapon state; organism movement/pain/O2/blood/consciousness/limbs.
+- **Execution:** every server frame for every active fake; drives multiple physical bodies through shadow control and direct forces.
+- **Invariants:** supported bone/physics map, valid organism schema, valid active weapon interface and cleanup of constraints/callbacks.
+- **Risks:** no fixed-step budget; frame-rate coupling; shared temporary tables; invalid physics/weapon assumptions; class/gameplay logic embedded in generic controls.
+- **Compatibility:** weapon/class integrations must use explicit interfaces before control separation.
+- **Validation:** deterministic input fixtures, frame/time-scale variance and population performance.
+- **Related:** fake system/behavior, organism state and future movement/class contracts.
+- **Last verified:** control blob `22c87ad4148716ff1173c104e7df943043b09ce5`; 2026-07-12.
