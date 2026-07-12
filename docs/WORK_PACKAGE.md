@@ -13,94 +13,93 @@
 
 ## Desired outcome
 
-Produce a self-contained, implementation-ready knowledgebase of the current project before refactoring begins. A future agent must be able to understand each system, its runtime behavior, ownership, contracts, dependencies, failure modes, integration surfaces, and validation procedure without repeating broad project discovery.
+Produce a self-contained, implementation-ready knowledgebase of the current project before refactoring begins. A future agent must be able to understand each system, runtime behavior, ownership, contracts, dependencies, failure modes, integration surfaces, and validation procedure without repeating broad discovery.
 
 ## Non-negotiable branch and session rules
 
 - Continue all current research and documentation on `docs/architecture-baseline`; do not create a branch per work package.
 - PR `#1` is the single active review surface against `main` during research.
 - Historical `chore/agent-knowledge-contract` and closed PRs `#2`/`#3` are obsolete consolidation artifacts; never resume work from them.
-- The research branch history was squashed into one intentional baseline commit, then continued with grouped research commits; do not recreate the prior fragmented history.
-- Do not treat lack of permission to merge `main` as a research blocker.
-- Continue after every bounded trace until the research baseline and subsequent integration work are complete.
+- The research branch was squashed into one intentional baseline commit and continues through grouped research commits; do not recreate fragmented history.
+- Lack of merge permission is not a research blocker.
+- Continue after every bounded trace until research and subsequent integration are complete.
 - Preserve every cumulative rule in root `AGENTS.md`.
 - Keep chat output to two-sentence TL;DRs; durable detail belongs in the repository.
-- Add only the smallest authoritative documentation or regression mechanism that prevents rediscovery, drift, or regression.
+- Add only the smallest authoritative mechanism that prevents rediscovery, drift, or regression.
 
 ## Verified completed research
 
-- Project structure, bootstrap/load order, realm routing, mode registration, round lifecycle, shared system/behavior/type contracts, file-manifest boundaries, and core public surfaces are documented in the architecture, living catalog, and reference files linked from `docs/README.md`.
-- Core mode catalog: `tdm`, `cstrike`, `dm`, and `hmcd`.
-- Team/PvE catalog: `hl2dm`, `coop`, and `defense`.
-- Additional standalone catalog: `riot`, `gwars`, `superfighters` (directory `sfd`), and `scugarena` (files named `*_arena.lua`).
-- Every catalog entry includes source blobs, lifecycle, public contracts, cross-system dependencies, verified defects, evidence gaps, and validation requirements.
-- The canonical documentation index is `docs/README.md`; no duplicate index or per-mode document proliferation is permitted.
+- Project structure, bootstrap/load order, realm routing, mode registration, round lifecycle, shared system/behavior/type contracts, file-manifest boundaries, and public surfaces are documented in the linked architecture/catalog/reference files.
+- Every known top-level mode directory now has a verified registry identity or explicit unresolved-file boundary in the grouped catalogs:
+  - core: `tdm`, `cstrike`, `dm`, `hmcd`, `fear`;
+  - team/PvE: `hl2dm`, `coop`, `defense`, `criresp`, `pathowogen`;
+  - additional: `riot`, `gwars`, `superfighters` (`sfd`), `scugarena`, `event` (`eventhandler`).
+- Fear inheritance and event framework are traced from `core/sh_fear.lua`, `core/sv_fear.lua`, `core/cl_fear.lua`, and `sv_scary_black_guy.lua`.
+- Pathowogen identity, extraction/assimilation flow, network channels, vehicle/fake-ragdoll integrations and major failure modes are traced from `sh_uwu.lua`, `sv_uwu.lua`, `cl_uwu.lua`, and `sv_dialogue.lua`.
+- `PUBLIC_SURFACES.md` now includes core/admin, competitive, Homicide/Fear, team/PvE and Pathowogen channel/state/trust summaries.
+- Every catalog entry names source blobs, lifecycle, dependencies, defects, evidence gaps and validation requirements.
 
 ## High-impact verified findings
 
-### Bootstrap and round framework
+### Framework
 
-- Global and gamemode loaders use different realm/traversal rules; neither explicitly sorts `file.Find` results.
-- Unprefixed global-loader files are shared by default; unmarked gamemode-loader files are ignored.
-- Mode inheritance requires an already-registered base, while mode-directory enumeration is unsorted.
-- Every function-valued `MODE` member is registered as a hook candidate, including helpers and dot-defined functions whose arguments are shifted by dispatcher-injected `self`.
-- Round states are `0`, `1`, and `3`; comments and mode code still reference stale state `2`.
-- The round system contains overlapping admin protocols and duplicate receiver/hook/function registrations; later name-keyed definitions are expected effective but need runtime confirmation.
-- Admin list/queue tables lack explicit shape, size, duplicate, and registered-ID validation.
+- Global and gamemode loaders differ in realm/traversal rules; neither explicitly sorts `file.Find` results.
+- Mode inheritance requires an already-registered base despite unsorted mode-directory enumeration.
+- Every function-valued mode member becomes a hook candidate; dot-defined functions receive shifted arguments.
+- Round states are `0`, `1`, `3`; stale comments/listeners use `2`.
+- Round administration contains overlapping protocols and duplicate name-keyed registrations; client-supplied tables are weakly validated.
 
-### Recurrent mode defects
+### Cross-mode
 
-- Multiple sender/receiver schema mismatches: base TDM start, HL2DM end, Counter-Strike winner encoding, Defense wave countdown and Homicide variable payloads.
-- Several launch checks are unconditional or overwritten despite required map points, teams, nav areas, objectives, or spawns.
-- Delayed callbacks commonly capture invalidatable players/entities without checks and may resample winners after the authoritative end transition.
-- Inventory, organism, appearance, weapon and class APIs are frequently assumed to return initialized/valid state.
-- Repeated misspelling `OverideSpawnPos` appears in Riot and Gang Wars; framework consumer is not yet traced.
-- Several modes scan all entities repeatedly or perform overbroad cleanup, creating performance and integration risk.
-- Many client modes reuse global music/end-menu/state names and remote audio URLs, creating cross-mode state, reliability, licensing, and privacy risks.
-- CO-OP listens for `ZB_RoundStart` while the verified core emitter is `ZB_StartRound`.
-- Defense depends on unresolved additional files/globals/methods and has client/server channels whose opposite endpoints are not in fetched top-level files.
-- Homicide `HMCD_RoundStart` can desynchronize when transmitted traitor count exceeds appearance-backed roster entries.
+- Sender/receiver schema mismatches exist in TDM, HL2DM, Counter-Strike, Defense and Homicide-family packets.
+- Required launch prerequisites are frequently absent, disabled, or overwritten.
+- Delayed callbacks capture invalidatable players/entities and often resample winners after authoritative end.
+- Inventory, organism, appearance, weapon, entity, class and integration APIs are assumed valid.
+- Multiple modes use expensive entity scans, overbroad cleanup, unnamespaced timers/hooks and shared client globals/audio state.
+- Fear and Pathowogen are hard-disabled for normal selection but still load function/direct-hook surfaces that require inactive-mode gating audits.
+- Fear accepts client-authored light samples, contains event/timer cleanup defects, a misspelled victim variable and unsafe entity/sound paths.
+- Pathowogen can recurse indefinitely when spawns are exhausted, mutates global fuel convars without restoration, duplicates broadcasts, assumes vehicle/weld validity and can leak `cam.IgnoreZ(true)` clientside.
 
 ## Current bounded trace
 
-Finish the remaining mode registry and mode-public-surface baseline, then produce the cross-mode function/payload collision matrix before moving into organism/fake-ragdoll/movement.
+The directory-level mode identity pass is complete. Convert it into two implementation-grade cross-mode matrices and close remaining endpoint/file gaps before moving into organism/fake-ragdoll/movement.
 
 ### Required outputs
 
-1. Discover exact filenames/registration IDs for unresolved directories (`criresp`, `eventhandler`, `pathowogen`, `homicide_fear`, and any additional mode directories) using executable evidence.
-2. Complete all Homicide channel endpoints/type augmentation and Counter-Strike objective entity/client contracts.
-3. Enumerate unresolved Defense files and pair support/highlight/wave channels with their senders/receivers.
-4. Classify every function-valued mode member as lifecycle, engine hook, project hook, data callback, network helper, or internal helper; identify collisions and argument shifts.
-5. Build one cross-mode packet matrix containing channel, writer, reader, ordered schema, authorization, validation, rate/size limits, and duplicate/legacy status.
-6. Trace the actual framework consumers for spawn-override flags, `COMMANDS`, map-point fallbacks, `zb.EndMatch`, and emitted round hook names.
-7. Update existing grouped catalogs/reference inventories rather than creating per-mode branches or documents.
+1. **Mode function matrix:** every function-valued mode member classified as lifecycle, engine hook, project hook, data callback, network helper, internal helper, or unresolved; include expected arguments, dispatcher behavior, collisions and realm.
+2. **Packet matrix:** every channel with writer, reader, ordered schema, conditional branches, authority, validation, phase, rate/size limits, duplicates and legacy status.
+3. Resolve remaining Homicide/Fear endpoints and conditional packet branches.
+4. Resolve Defense auxiliary wave/support/highlight files and endpoints.
+5. Resolve Counter-Strike bomb/hostage entities and client receivers.
+6. Complete Pathowogen derma/end-report endpoints and inactive-mode direct-hook audit.
+7. Trace framework consumers for `OverideSpawnPos`/spawn override, `COMMANDS`, map-point fallback, `zb.EndMatch`, round-hook names and mode cleanup.
+8. Update existing catalogs/reference files; do not create branches or per-mode documents.
 
 ## Validation requirements
 
-- Cross-check sender and receiver endpoints; never infer payloads from one side.
+- Cross-check both packet endpoints and every conditional branch.
 - Separate expected name-keyed overwrite behavior from runtime-confirmed behavior.
-- Verify client-supplied values are bounded, typed, authorized, rate-limited where appropriate, and resolved server-side.
-- Verify server/client mode registries agree on network-visible IDs, inherited members, and lifecycle callbacks.
-- Review UI, persistence, selection, map points, spawn, team, organism, inventory, appearance, weapon, entity, NPC and cleanup consumers before classifying a mode contract as complete.
-- Introduce no runtime Lua, asset, configuration, or `main` changes during research.
+- Verify all client values are typed, bounded, authorized, phase-checked, rate-limited and server-resolved where applicable.
+- Verify server/client mode registries agree on IDs, inheritance and callback sets.
+- Review UI, persistence, selection, points, spawn, team, organism, inventory, appearance, weapons, entities, NPCs, vehicles, audio/render state and cleanup consumers.
+- Introduce no runtime Lua, assets, configuration or `main` changes during research.
 
 ## Risks and evidence gaps
 
-- Static source cannot prove total engine startup order, unsorted enumeration order, or effective overwrite behavior; temporary runtime instrumentation is required.
-- Full recursive path enumeration remains incomplete because the connector cannot reliably list directories; filename discovery is incremental.
-- Physical historical branch deletion is unavailable through the connector; the obsolete branch points to `main` and is explicitly excluded from work.
-- No dedicated-server smoke-test evidence has been captured for the current baseline.
-- Existing catalog findings identify implementation defects but must not be patched before adjacent contracts and integration boundaries are fully mapped.
+- Static source cannot prove total startup order, unsorted enumeration order, inactive-hook execution or effective duplicate overwrite behavior; temporary runtime instrumentation is required.
+- Recursive path enumeration remains incomplete because the connector cannot reliably list directories; discovery is incremental and upstream search is used only to locate paths before fetching current-repo files.
+- No dedicated-server smoke-test evidence has been captured.
+- Documented defects must not be patched until adjacent contracts and integration boundaries are mapped.
 
 ## Dependency-ordered continuation
 
-1. Complete every mode, packet, inheritance edge, function classification, and public surface.
-2. Complete file/realm and public-surface inventories discovered through those modes.
-3. Trace organism, fake-ragdoll, movement, and player-class systems.
+1. Build the complete function and packet matrices; close remaining mode endpoint/file gaps.
+2. Complete file/realm/public-surface inventories discovered through those matrices.
+3. Trace organism, fake-ragdoll, movement and player-class systems.
 4. Trace weapons/combat/explosives, inventory/equipment/appearance, NPC/bots, UI/camera/spectator, persistence/admin/security/integrations.
-5. Produce the cross-system integration map, regression matrix, verified defect catalog, and implementation-ready remediation packages.
-6. Continue through implementation packages on justified branches only after the research baseline defines their boundaries and the user approves transition from research.
+5. Produce cross-system integration map, regression matrix, verified defect catalog and implementation-ready remediation packages.
+6. Begin implementation on justified branches only after research defines boundaries and the user approves transition.
 
 ## Exact next action
 
-Continue on `docs/architecture-baseline`: discover and trace the unresolved mode directories using verified filenames, pair the unresolved Homicide/Defense/Counter-Strike network endpoints, and update the existing grouped mode catalogs plus `PUBLIC_SURFACES.md` without creating another branch or PR.
+Continue on `docs/architecture-baseline`: inventory all function-valued members from the fetched mode files into the mode-function matrix, then inventory their network channels into the packet matrix; while doing so, fetch the unresolved Defense, Homicide/Fear, Counter-Strike and Pathowogen endpoint files and update existing references without creating another branch or PR.
