@@ -87,12 +87,23 @@ Stable system IDs are cross-references for architecture documents, behaviors, ty
 - **Validation:** transport fuzz/security, every class transition in all lifecycle states, failure rollback, multi-player same-class Think, resource/hook/relationship cleanup and realm parity.
 - **Related:** `architecture/PLAYER_CLASS_SYSTEM.md`, class registry/payload/runtime types, class transition behavior.
 
+## `SYS-WEAPON-COMBAT` — Weapon capability, fake-body action, ammunition and damage integration
+
+- **Status:** `partial` — the fake-controller consumer contract is executable-source verified; SWEP publishers, physical bullets, ammo/reload, projectiles, armor and complete networking remain unresolved.
+- **Purpose:** Supplies weapon classification, stance/resting/hold behavior, active-ragdoll callbacks, attack/use ownership, loadout persistence and combat effects to standing and physical-body controllers.
+- **Verified source:** `lua/homigrad/fake/sv_control.lua` blob `22c87ad4148716ff1173c104e7df943043b09ce5`.
+- **Current implicit API:** `ishgweapon`, `IsPistolHoldType`, optional `IsResting`, `RagdollFunc`, `ismelee`, and `ismelee2`.
+- **Authority:** fake-body weapon behavior executes server-side every frame inside `Think/Fake`; generic arm/constraint/organism logic surrounds weapon callbacks.
+- **Risks:** ad-hoc capability flags, incomplete validity guards, shared input precedence, callback mutation without ownership limits, no command/body generation, unbudgeted per-frame work, and partial active-weapon restoration across respawn-based get-up.
+- **Validation:** enumerate all publishers/consumers; trace switch/drop/pickup/fake/get-up/death; snapshot clips/ammo/reload/attachments/cooldowns; compare server action to client render/animation under latency; assert cleanup and body-generation safety.
+- **Related:** `architecture/WEAPON_COMBAT_INTERFACES.md`, `SYS-FAKE-RAGDOLL`, `SYS-MOVEMENT`, `SYS-ORGANISM`, `SYS-CHARACTER-RUNTIME`.
+
 ## `SYS-CHARACTER-RUNTIME` — Cross-system player/body/class/movement/physiology ownership
 
-- **Status:** `partial` — four-system authority graph verified; weapons, inventory, appearance, armor, NPC and vehicle boundaries remain incomplete.
-- **Purpose:** Records the actual lifecycle authority across `SYS-ORGANISM`, `SYS-FAKE-RAGDOLL`, `SYS-MOVEMENT`, and `SYS-PLAYER-CLASS` so they are not refactored independently.
-- **Authority problem:** class, body, organism, controller, equipment and presentation state are distributed across player fields, ragdolls, shared tables, NWVars, packets, hooks and modes without one generation/transaction owner.
-- **Highest-impact defects:** arbitrary client class assignment; no body/organism generation; respawn-based get-up; shared class Think throttle; prediction-unsafe movement context; order-dependent physiology; overlapping fake transport; no transactional class/fake transitions; unbudgeted combined cadence.
-- **Validation:** stable lifecycle generation tracing, transition matrix, one-owner/controller invariants, stale-callback detection and combined performance budgets.
+- **Status:** `partial` — four-system authority graph and initial weapon-facing fake-controller contract verified; inventory, appearance, armor, NPC and vehicle boundaries remain incomplete.
+- **Purpose:** Records the actual lifecycle authority across organism, fake-ragdoll, movement, player class and weapon-facing contracts so they are not refactored independently.
+- **Authority problem:** class, body, organism, controller, equipment, weapon and presentation state are distributed across player fields, ragdolls, shared tables, NWVars, packets, hooks and modes without one generation/transaction owner.
+- **Highest-impact defects:** arbitrary client class assignment; no body/organism generation; respawn-based get-up; shared class Think throttle; prediction-unsafe movement context; order-dependent physiology; overlapping fake transport; no transactional class/fake/weapon restoration; unbudgeted combined cadence.
+- **Validation:** stable lifecycle generation tracing, transition matrix, one-owner/controller invariants, stale-callback detection, weapon-state preservation and combined performance budgets.
 - **Planned boundary:** per-player CharacterRuntime, explicit PhysiologyState, PhysicalBodyController, MovementContext, immutable ClassDefinition plus per-player ClassRuntime, and adapters for appearance/equipment/armor/weapons/NPCs/vehicles.
-- **Related:** `architecture/CHARACTER_RUNTIME_INTEGRATION.md` and all four subsystem documents.
+- **Related:** `architecture/CHARACTER_RUNTIME_INTEGRATION.md` and subsystem documents.
