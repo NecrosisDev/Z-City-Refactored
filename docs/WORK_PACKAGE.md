@@ -1,74 +1,78 @@
 # Active Work Package
 
-> This file contains only the current package and immediate continuation state. Completed detail belongs in commits, pull requests, issues, catalogs, tests, or decision records.
+> This file contains only the current package and immediate continuation state. Completed detail belongs in commits, pull requests, architecture documents, catalogs, tests, or decision records.
 
 ## Identity
 
-- **ID:** `WP-DOCS-001`
-- **Title:** Establish repository-local agent memory, knowledge, and regression contract
-- **Branch:** `chore/agent-knowledge-contract`
-- **Pull request:** `#2` (draft)
-- **Status:** `ready for authorized merge`
-- **Knowledge state:** `Verified` for repository changes; no gameplay claims added
+- **ID:** `WP-RESEARCH-001`
+- **Title:** Build the code-grounded ZCity Refactored architecture baseline
+- **Branch:** `docs/architecture-baseline`
+- **Pull request:** `#1`
+- **Status:** `active research`
+- **Knowledge state:** mixed `Verified` and explicitly labeled `Inferred`; no existing comments or legacy documentation are trusted without code evidence
 
 ## Desired outcome
 
-Ensure every future agent begins each session with the same cumulative operating rules, current work state, evidence hierarchy, implementation depth, regression standard, and continuation requirement without depending on conversation history.
+Produce a self-contained, implementation-ready knowledgebase of the current project before refactoring begins. A future agent must be able to understand each system, its runtime behavior, ownership, contracts, dependencies, failure modes, integration surfaces, and validation procedure without repeating broad project discovery.
 
-## Non-negotiable constraints
+## User corrections governing this package
 
-- `AGENTS.md` is the singular source of truth for agent behavior.
-- Explicit user corrections are cumulative and may not silently weaken unrelated established rules.
-- Agents never commit directly to `main` and do not merge without explicit authorization.
-- Chat output is limited to TL;DR summaries of no more than two sentences; durable detail belongs in the repository.
-- Individual packages remain safely bounded, but work continues through dependency-ordered packages until full system integration.
-- Work is not complete at document, edit, commit, branch, pull-request, or local-package completion.
-- Documentation must be handoff-complete enough to minimize rediscovery, design inference, and token usage.
-- Every active session ends with a repository handoff and an arranged automated continuation unless genuinely blocked or fully integrated.
-- Prevent regression and information loss using the smallest authoritative mechanisms; do not add process or runtime bloat.
+- All current research and documentation work belongs on this single branch; do not create per-work-package branches.
+- PR `#1` is the single review surface against `main` during the research phase.
+- Continue researching after each bounded trace; do not treat branch, document, catalog, or PR completion as a stopping condition.
+- Preserve every cumulative rule in root `AGENTS.md`.
+- Keep chat output to two-sentence TL;DRs; durable detail belongs in the repository.
+- Add only the smallest documentation or regression mechanisms that prevent rediscovery, drift, or regression.
 
-## Scope completed
+## Verified completed research
 
-- Consolidated all established workflow corrections and clarifications into root `AGENTS.md`.
-- Added contract-integrity rules preventing silent drift, weakening, or replacement.
-- Added mandatory per-session startup and repository inspection sequence.
-- Defined repository, branch, commit, merge, and chat-output rules.
-- Defined evidence authority and confidence labels: `Verified`, `Inferred`, `Legacy Claim`, and `Planned`.
-- Defined handoff-complete implementation documentation requirements.
-- Defined regression review surfaces and anti-bloat constraints.
-- Defined continuation behavior and full-system-integration completion criteria.
-- Updated `docs/INDEX.md` to require agents to read `AGENTS.md` first.
-- Retained compact system, behavior, type, decision, work-package, and pull-request mechanisms as supporting records.
-- Aligned PR `#2` and the pull-request checklist with the consolidated contract.
+- Repository layout, addon/gamemode split, subsystem boundaries, namespaces, persistence locations, dependencies, and structural risks are traced in `docs/architecture/PROJECT_SETUP.md`.
+- Global addon bootstrap, gamemode bootstrap, realm routing differences, recursion order, mode assembly, inheritance dependency, hook dispatch, and round startup are traced in `docs/architecture/BOOTSTRAP_AND_LOAD_ORDER.md`.
+- The global and gamemode loaders use materially different realm-selection and traversal rules.
+- Neither loader explicitly sorts `file.Find` output.
+- Unprefixed files under the global `lua/homigrad` loader are shared by default, while unmarked files in the gamemode loader are not included by its routing function.
+- Mode inheritance requires the base mode to have already been registered.
+- Runtime round-state handling uses state `3` for the end period despite conflicting comments that mention state `2`.
+- The cumulative agent contract and handoff rules were consolidated into this branch; the duplicate documentation index was removed and `docs/README.md` is canonical.
 
-## Validation
+## Current bounded trace
 
-| Check | Result | Evidence |
-|---|---|---|
-| Canonical rules are repository-local | Pass | Root `AGENTS.md` |
-| Every session has an explicit startup sequence | Pass | `AGENTS.md` and `docs/INDEX.md` |
-| Conversation history is not required | Pass | Contract requires repository-complete handoff |
-| Contract drift has a defined failure response | Pass | `AGENTS.md` contract-integrity section |
-| Branch divergence | Pass | Latest comparison reports the branch ahead of `main` and zero commits behind; compare again immediately before merge |
-| Pull request mergeability | Pass | PR `#2` reports mergeable |
-| Changed-file scope | Pass | Exactly eight Markdown files |
-| Main branch modified | No | All changes remain on `chore/agent-knowledge-contract` |
-| Runtime behavior modified | No | No Lua, assets, hooks, net messages, convars, configuration, or load-order files changed |
-| Process/tooling bloat introduced | No | No service, hook, generator, CI, runtime dependency, or duplicate registry |
-| Gameplay claims introduced | No | Catalogs remain evidence-gated templates |
+Populate the living catalogs from already verified bootstrap and round-system evidence, then extend the trace into a complete loaded-file/realm manifest and public-surface inventory.
 
-## Risks and blockers
+### Required outputs
 
-- **Blocking gate:** PR `#2` cannot be merged until the user explicitly authorizes merging to `main`, as required by `AGENTS.md`.
-- A generic instruction such as `Continue` is not merge authorization and must not be reinterpreted as such.
-- The contract cannot govern agents operating from `main` until that merge occurs.
-- Repository rules remain advisory unless agents follow startup instructions; CI enforcement must not be added without a demonstrated compliance failure.
-- The first real tracing package must test whether the catalog templates provide sufficient detail without duplication.
+1. `docs/SYSTEM_CATALOG.md` entries for global bootstrap, gamemode bootstrap, mode registry/dispatch, and round lifecycle.
+2. `docs/BEHAVIOR_CATALOG.md` entries for realm routing, mode selection/dispatch, and round-state progression where observable behavior is established.
+3. `docs/TYPE_CATALOG.md` entries for mode tables/registries and round-state identifiers/contracts.
+4. Exact source paths and symbols for each claim.
+5. Explicit evidence gaps where runtime ordering or behavior cannot be proven from static source alone.
+6. Reproducible server-start and round-cycle validation procedures.
 
-## Exact continuation action
+## Validation requirements
 
-1. Obtain an explicit instruction equivalent to: `Merge PR #2 into main.`
-2. Merge only after that authorization; do not reinterpret a generic continuation instruction as merge approval.
-3. Create a focused branch from the updated `main` for `WP-TRACE-001`.
-4. Trace executable Lua bootstrap/load order and populate the first verified `SYS-*` entries with exact paths, realms, include order, hooks, dependencies, public surfaces, data ownership, failure modes, and reproducible startup validation.
-5. Leave another repository-complete handoff before stopping.
+- Cross-check catalog entries against executable source, not only architecture prose.
+- Confirm realm, initialization order, public globals, hooks, commands, convars, network messages, persistence paths, and authoritative data ownership.
+- Distinguish static-source verification from runtime verification still required.
+- Review adjacent consumers before declaring any contract complete.
+- Ensure no runtime Lua, assets, configuration, or `main` changes are introduced during research.
+
+## Risks and evidence gaps
+
+- Source establishes local loader sequences but not the engine-level interleaving between addon autorun, gamemode startup, and all engine callbacks; runtime instrumentation is required for a total order.
+- Unsorted `file.Find` enumeration creates implicit ordering dependencies that static inspection can identify but not prove stable across environments.
+- Mode functions stored directly on `MODE` may mix engine-hook handlers, lifecycle methods, and internal helpers; consumers must be classified before documenting the public contract.
+- The full set of loaded files, globals, hooks, net messages, commands, convars, and data files is not yet inventoried.
+- No runtime smoke-test evidence has yet been captured for the current repository baseline.
+
+## Dependency-ordered continuation
+
+1. Verify the source files cited by the two architecture documents and populate the initial system/behavior/type catalog entries.
+2. Build the complete loaded-file and realm manifest from both loader trees.
+3. Inventory globals, public APIs, hooks, network messages, console variables, console commands, persistence files, and external dependencies.
+4. Trace round lifecycle and every registered mode, including inheritance, availability, selection, hooks, state transitions, and cleanup.
+5. Continue subsystem-by-subsystem through organism/fake-ragdoll/movement, weapons/combat, inventory/equipment, NPC/bots, UI/camera/spectator, persistence/admin/security/integrations.
+6. Finish with a cross-system integration map, verified defects/risks, regression matrix, and dependency-ordered implementation work packages.
+
+## Exact next action
+
+Read the executable loader and round-system sources on this branch, update the three living catalogs with evidence-backed entries, update PR `#1` with the consolidated research scope, then continue into the file/realm manifest without creating another branch.
