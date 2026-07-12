@@ -6,7 +6,7 @@
 **Status:** `partial / executable-source verified`  
 **Reviewed:** 2026-07-12
 
-This document extends [`MODE_CATALOG.md`](MODE_CATALOG.md) for larger team/PvE modes whose dependencies span NPCs, map progression, persistence, wave orchestration, and player classes. Additional files may exist in these mode directories; only fetched files are treated as verified.
+This document extends [`MODE_CATALOG.md`](MODE_CATALOG.md) for larger team/PvE modes whose dependencies span NPCs, map progression, persistence, wave orchestration, player classes, readiness lobbies, and specialized objective systems. Additional files may exist in these directories; only fetched files are treated as verified.
 
 ## Summary matrix
 
@@ -15,6 +15,7 @@ This document extends [`MODE_CATALOG.md`](MODE_CATALOG.md) for larger team/PvE m
 | `hl2dm` | `hl2dm` | none observed | `sh_hl2dm.lua`, `sv_hl2dm.lua`, `cl_hl2dm.lua` | unconditional `true` | team/spawn system, player classes, map points, inventory, attachments, airstrike entity |
 | `coop` | `coop` | none observed | `sh_coop.lua`, `sv_coop.lua`, `cl_coop.lua` | first valid `trigger_changelevel` required | HL2 campaign maps, NPCs, SQL, `hg.CoopPersistence`, classes, inventory, map progression, possession |
 | `defense` | `defense` | none observed | `sh_defense.lua`, `sv_defense.lua`, partial `cl_defense.lua` | at least one spawn and one nav area | wave-definition/music globals, NPC bases, timers, spawn/map points, support UI, player classes |
+| `criresp` | `criresp` | none observed | `sh_criresp.lua`, `sv_criresp.lua`, `cl_criresp.lua` | >3 SWAT points, >0 suspect points, >5 playing players | readiness lobby, SWAT loadout UI, fake ragdoll/organism, physical bullets, map zones, bodygroups, armor/inventory |
 
 ---
 
@@ -39,20 +40,17 @@ This document extends [`MODE_CATALOG.md`](MODE_CATALOG.md) for larger team/PvE m
 
 ### Verified defects and risks
 
-1. **End payload mismatch:** server computes `winnerteam` but writes no value; client reads `net.ReadInt(3)`. The value is unused after reading, but the contract is invalid and outcome presentation cannot use the result.
-2. **Unreachable all-dead branch:** `elseif team0 == team1` catches `0 == 0` before the later everybody-died condition.
-3. **Dispatcher argument shift:** dot-defined `GuiltCheck(Attacker, ...)` receives the injected mode table first.
-4. **Round-state leakage:** `ClearPlayerRoles()` clears only NWString; `ply.leader` and `ply.subClass` are not reset in the traced mode and can persist into later rounds/classes.
-5. **Inventory shape assumption:** `inv["Weapons"]` is written without ensuring it exists.
-6. **Timer validity:** delayed `ply.noSound = false` does not check `IsValid(ply)`.
-7. **Client nil assumptions:** HUD indexes team data for only teams 0/1; radial menu assumes `lply.organism`; DynaMusic/PluvTown are used without local availability checks.
-8. **Canister validity:** entity creation is not checked before method calls.
-9. **Global airstrike cooldown:** one leader blocks every other leader; intended scope is not documented.
-10. **Unconditional launch:** team and required spawn-point availability are not validated.
+1. Server computes `winnerteam` but writes no value; client reads `net.ReadInt(3)`.
+2. Equal-team branch catches `0 == 0` before the later everybody-died condition.
+3. Dot-defined `GuiltCheck` receives the injected mode table first.
+4. `ClearPlayerRoles()` clears only NWString; `leader`/`subClass` can leak.
+5. Inventory shape, delayed player validity, HUD team data, organism, DynaMusic/PluvTown and canister creation are assumed valid.
+6. Airstrike cooldown is global across leaders; intent is undocumented.
+7. Launch does not validate teams or required points.
 
 ### Required validation
 
-Server/client registry parity; zero/one-team and all-dead outcomes; exact end payload; role/subclass cleanup across repeated and different modes; missing inventory/organism/DynaMusic; absent sniper/team points; disconnected timer subject; invalid canister class; multiple leaders and cooldown/strike reset; sky-access trace failures.
+Registry parity; zero/one-team/all-dead; exact end payload; role cleanup; missing dependencies/points; disconnected timer; invalid canister; multiple leaders; sky access.
 
 ---
 
@@ -60,44 +58,40 @@ Server/client registry parity; zero/one-team and all-dead outcomes; exact end pa
 
 ### Verified files and contract
 
-- Shared `sh_coop.lua` blob `629ea48b727a41331c8cd8c773a36a8a678e93d5` registers `HMCD_COOP_SPAWN` and a map-to-`PlayerEqipment` table covering early HL2 campaign maps (`PlayerEqipment` is the consistent misspelled schema key).
-- Server `sv_coop.lua` blob `4fb5ef31d340556b5eeed9d97fa0e5484e646bd4` registers `name = "coop"`, `PrintName`, `ROUND_TIME = 9000`, `Chance = 1`, `ForBigMaps = true`, no automatic loot spawn, and launch only when a valid `trigger_changelevel` exists.
+- Shared `sh_coop.lua` blob `629ea48b727a41331c8cd8c773a36a8a678e93d5` registers `HMCD_COOP_SPAWN` and a map-to-`PlayerEqipment` table (`PlayerEqipment` is the consistent misspelling).
+- Server `sv_coop.lua` blob `4fb5ef31d340556b5eeed9d97fa0e5484e646bd4` registers `name = "coop"`, `ROUND_TIME = 9000`, `Chance = 1`, `ForBigMaps = true`, no automatic loot, and requires a valid `trigger_changelevel`.
 - Client `cl_coop.lua` blob `9a0f1d90bdf6521991a1a3ef424cec5202c86dde` owns introduction/waiting HUD, music, and payload-free end menu.
-- Intermission cleans the map, caches CO-OP points, moves non-spectators to team 0, and sends payload-free `coop_start`.
-- Spawn fallback order: configured map points, master `info_player_start` entities, then `(0,0,0)`.
-- Equipment selects/restores Gordon, medic, grenadier, refugee or rebel roles using optional `hg.CoopPersistence` and per-map class schema.
-- SQLite table `coop_maps(map, completed)` tracks completed maps; command `clearmaps` drops it.
-- Round ends when no eligible non-Combine/Metrocop/zombie players remain. If `hg.MapCompleted`, a delayed save and `changelevel hg.NextMap` are scheduled.
-- Dead players can possess nearby supported NPCs with `E`; possession converts the NPC into a player class and optionally transfers its weapon.
+- Intermission cleans the map, caches points, moves non-spectators to team 0, and sends `coop_start`.
+- Spawn fallback: configured points, master `info_player_start`, then `(0,0,0)`.
+- Equipment restores/selects roles through optional `hg.CoopPersistence` and per-map schema.
+- SQLite `coop_maps(map, completed)` tracks maps; `clearmaps` drops it.
+- If `hg.MapCompleted`, round end schedules save and `changelevel hg.NextMap`.
+- Dead players can possess supported NPCs with `E`.
 
 ### Public surfaces
 
-- Channels: `coop_start`, `coop_roundend` (both payload-free).
+- Channels: `coop_start`, `coop_roundend`.
 - Convars: `zb_coop_rts`, `zb_coop_rts_cmb`, `zb_coop_rts_zmb`, `zb_coop_autochangelevel`, `zb_coop_maxpossesses`.
-- Globals/services: `hg.NextMap`, `hg.FriendlyClasses`, `hg.MapCompleted`, `hg.CoopPersistence`, SQL table `coop_maps`, command `clearmaps`.
+- Globals/services: `hg.NextMap`, `hg.FriendlyClasses`, `hg.MapCompleted`, `hg.CoopPersistence`, SQL `coop_maps`, command `clearmaps`.
 - Hooks: `EntityTakeDamage/dontfuckingdamagethem`, `PlayerButtonDown/checks`, `ZB_RoundStart/RTSoff`, `PostCleanupMap/RTScleanup`, `OnEntityCreated/CoopAlyxWeapon`.
-- Player state: `RTSUses`, `PlayerClassName`, `subClass`, inventory, role, `noSound`.
 
 ### Verified defects and risks
 
-1. **Guilt argument shift:** dot-defined `GuiltCheck` is dispatched with mode table as first argument.
-2. **Empty friendly-fire hook:** `EntityTakeDamage` identifies friendly player-to-NPC damage but performs no action.
-3. **Round-hook name mismatch:** CO-OP resets possession uses on `ZB_RoundStart`, while the verified round system emits `ZB_StartRound`; only `PostCleanupMap` may currently reset it.
-4. **Zombie possession discovery mismatch:** `CanPossessNPC` supports zombies when enabled, but the `PlayerButtonDown` search only considers friendly and Combine tables, so zombie targets are not selected through the traced input path.
-5. **Nil-current-round assumptions:** multiple global hooks call `CurrentRound().name` without verifying a mode exists.
-6. **Immediate end plus delayed changelevel:** `ShouldRoundEnd()` returns true while independently scheduling save/changelevel; global end lifecycle can run concurrently with transition logic.
-7. **Empty next map:** `hg.NextMap` initializes to `""`; changelevel is not guarded against empty/invalid destination.
-8. **All-player equipment pass:** spawn position is assigned before the alive check, so dead/spectator entries from `player.GetAll()` can be moved.
-9. **Inventory shape assumptions:** default equipment indexes `Inventory.Weapons` without nil/shape guards.
-10. **Timer validity:** delayed `noSound` reset lacks a validity check in the main equipment path.
-11. **Persistence is optional but stateful:** restore/default role selection depends on external APIs and `MarkPlayerRestored`; partial implementations can duplicate or lose equipment.
-12. **Possession race:** NPC is removed before player spawn/class/weapon conversion completes; failure leaves neither source NPC nor guaranteed replacement state.
-13. **Map schema coverage:** wildcard `d2_*` is a literal table key in the traced lookup and will not match arbitrary `d2_` maps without separate pattern logic.
-14. **Client shared-color mutation:** HUD mutates alpha on persistent color objects and assumes DynaMusic/role/player class availability.
+1. Guilt argument shift.
+2. Friendly-fire hook performs no action.
+3. Listens for `ZB_RoundStart`, while core emits `ZB_StartRound`.
+4. Zombie possession is supported by validator but omitted from target discovery.
+5. Several hooks call `CurrentRound().name` without nil guard.
+6. Immediate round end races delayed save/changelevel; `hg.NextMap` can be empty.
+7. Spawn position is assigned before alive check, moving dead/spectator players.
+8. Inventory shape, timer subjects and persistence consistency are assumed.
+9. NPC is removed before possession replacement succeeds.
+10. Literal `d2_*` table key does not wildcard-match maps.
+11. Client mutates persistent colors and assumes optional services.
 
 ### Required validation
 
-Campaign maps with/without custom spawn points and changelevel triggers; literal versus wildcard map schema; zero players/all spectators; empty `hg.NextMap`; save/changelevel concurrency; complete/partial/absent persistence service; disconnected timers; inventory absence; possession limits/reset hook, friendly/Combine/zombie targets, weapon transfer failure, and map cleanup; SQL persistence across restart.
+Campaign maps/points/triggers; wildcard schema; zero/all spectators; empty next map; save/changelevel race; persistence permutations; possession targets/limits/reset; inventory/timers; SQL restart.
 
 ---
 
@@ -105,45 +99,99 @@ Campaign maps with/without custom spawn points and changelevel triggers; literal
 
 ### Verified files and contract
 
-- Shared `sh_defense.lua` blob `c442fdab7cf3dfcc6c8d3a41dd748decce550f97` registers NPC/player/defense points and three UI-facing submodes: `STANDARD` 6 waves, `EXTENDED` 12 waves, `ZOMBIE` 6 waves.
-- Server `sv_defense.lua` blob `5880d943c792f66f236e1bbd018c444f25a70168` registers `name = "defense"`, `PrintName`, `ROUND_TIME = 10000`, `Chance = 0.02`, `ForBigMaps = true`, loot enabled, and launch when a spawn and nav area exist.
-- Client `cl_defense.lua` blob `8ce0d36a80371fe8c78c76d5223f122b1efd655a` is at least 1045 lines and owns HUD, voting, outlines, music, support request UI, and end menu; later ranges remain partially untraced.
+- `sh_defense.lua` blob `c442fdab7cf3dfcc6c8d3a41dd748decce550f97` registers points and `STANDARD`/`EXTENDED`/`ZOMBIE` UI submodes.
+- `sv_defense.lua` blob `5880d943c792f66f236e1bbd018c444f25a70168` registers `name = "defense"`, `ROUND_TIME = 10000`, chance `0.02`, loot, and requires a spawn plus nav area.
+- `cl_defense.lua` blob `8ce0d36a80371fe8c78c76d5223f122b1efd655a` owns HUD, voting, outlines, music, support UI and end menu; later ranges remain partial.
 - Intermission resets wave state, cleans map, assigns team 1, calls `EndWave()`, and starts a 15-second vote.
-- Vote accepts bounded int 1..3 with one-second per-player rate limits, supports changes, and selects randomly among tied highest results.
-- Preparation respawns players, grants equipment, sends a 30-second countdown, then starts wave 1.
-- Wave tracking uses a mode-owned entity registry plus a full-entity discovery scan every two seconds; zero remaining tracked NPCs ends the wave.
-- End round broadcasts, ends wave, clears timers/state, and removes broad NPC/NextBot/class-pattern entities.
+- Vote accepts 1..3 with per-player one-second rate limit and random tie selection.
+- Preparation respawns/equips, sends 30-second countdown, then starts wave 1.
+- Tracked entities plus a full entity scan every two seconds determine wave completion.
+- End removes broad NPC/NextBot/class-pattern entities and falls back to delayed `gamemode_restart` if `zb.EndMatch` is absent.
 
 ### Public surfaces and unresolved dependencies
 
 - Vote channels: `defense_start_vote`, `defense_submit_vote`, `defense_change_vote`, `defense_vote_result`, `defense_vote_update`, `defense_show_selected_mode`.
 - Wave channels: `npc_defense_start`, `npc_defense_newwave`, `npc_defense_roundend`, `npc_defense_prepphase`, `StartWaveMusic`, `StopWaveMusic`, `defense_boss_incoming`.
-- Client also receives `defense_highlight_last_npcs` and sends `RequestSupport`; registrations/handlers are not present in the fetched top-level server file and imply additional loaded files or missing contracts.
-- Unresolved external globals/methods: `DEFENSE_WAVE_DEFINITIONS`, `DEFENSE_MUSIC`, `StartNewWave`, `SpawnWave`, `OnWaveComplete`, `ClearPlayerRoles`, support system, wave entity creation, role/equipment definitions, `zb.EndMatch`.
-- `MODE.Timers` stores globally named timers; client convar `cl_wavemusic`; player fields `HasVoted`, vote timestamps, roles.
+- Client receives `defense_highlight_last_npcs` and sends `RequestSupport`; top-level server counterparts are unresolved.
+- Unresolved: `DEFENSE_WAVE_DEFINITIONS`, `DEFENSE_MUSIC`, `StartNewWave`, `SpawnWave`, `OnWaveComplete`, `ClearPlayerRoles`, support system, wave entity creation, `zb.EndMatch`.
 
 ### Verified defects and risks
 
-1. **Guilt argument shift:** dot-defined `GuiltCheck` receives the mode table first.
-2. **Unnamespaced timers:** names such as `vote_end_timer`, `vote_update_timer`, and `prep_phase_timer` can collide with other systems/instances.
-3. **Intermission calls `EndWave()` at wave 0:** this invokes `OnWaveComplete()` and waiting-music/cleanup logic before voting; behavior depends on unresolved external implementation.
-4. **Double entity traversal:** tracked entities are checked, then every entity is scanned every two seconds; debug `print` statements run on count/death changes.
-5. **Overbroad cleanup:** end round removes every NPC and classes containing `npc_vj_`, `sent_vj_`, `zb_`, or `terminator_nextbot_`, including unrelated spawned/admin/integration entities.
-6. **Countdown schema asymmetry:** server writes float deadline plus int4 wave on `npc_defense_newwave`; traced client reads only the float and discards wave data.
-7. **HUD team assumption:** client indexes `teams[lply:Team()]` with only team 1 defined.
-8. **Unresolved support channel:** client sends arbitrary support command strings; server authorization, validation, cost/cooldown and handler are unverified.
-9. **Missing-top-level methods:** fetched server file calls wave/role methods not defined there; launch safety cannot be established until all directory files are enumerated.
-10. **Fallback restart:** if `zb.EndMatch` is missing, delayed `gamemode_restart` follows cleanup; repeated invocation/race with global round system requires testing.
-11. **Vote table transport:** server repeatedly broadcasts Lua tables; payload size is currently small but schema/version is implicit.
-12. **Shared color mutation and UI lifecycle:** client mutates persistent role colors and creates full-screen vote panels/music timers requiring cleanup across disconnect/mode change/hotload.
+1. Guilt argument shift.
+2. Unnamespaced timers can collide.
+3. Intermission calls `EndWave()` at wave 0.
+4. Double entity traversal and debug prints.
+5. End cleanup can delete unrelated VJ/ZBase/NextBot/project entities.
+6. Server writes deadline+wave on `npc_defense_newwave`; traced client reads only deadline.
+7. Client assumes team 1.
+8. Support command authorization/validation/cost/cooldown unresolved.
+9. Missing methods imply additional files or incomplete mode.
+10. Restart can race global lifecycle; table payload schemas are implicit; UI/music cleanup needs validation.
 
 ### Required validation
 
-Enumerate every Defense file first; resolve all external wave/support methods/globals; zero-player/no-nav/no-spawn launch; vote tie/change/disconnect/reconnect; timer name collision/hotload; all three submodes and boss waves; NPC base variants (engine, VJ, ZBase, NextBot); unrelated NPC/entity survival; wave-count packet; player team/HUD guard; music/panel cleanup; fallback EndMatch/restart path; support authorization and rate limits.
+Enumerate all files; resolve wave/support; launch prerequisites; vote lifecycle; timer collisions; all submodes/bosses; NPC integrations; unrelated entity survival; packet schema; support security; restart race.
+
+---
+
+## `MODE-criresp` — Crisis Response
+
+### Verified files and lifecycle
+
+- `sh_criresp.lua` blob `0a545b437c09eba05f056634e7c5c7fecd8db052` registers SWAT/suspect spawn points, sniper zone/spawn points, model, five primaries, eight gear choices, five gear slots and default gear.
+- `sv_criresp.lua` blob `17f222f42c6f3299fcbfd0d6a8b01b2497d13453` registers `name = "criresp"`, `ROUND_TIME = 480`, `start_time = 90`, `end_time = 9`, chance `0.05`, and replicated/admin-controlled `criresp_over20`.
+- `cl_criresp.lua` blob `7551b3252a75f9a7d1e2a038326af7e588360310` owns a large readiness/customization/settings/how-to UI, presentation, music and end report.
+- `AssignTeams()` shuffles all connected players, assigns 1..6 SWAT based on capped connected count, assigns remaining capped players suspects, and leaves excess users unassigned until Intermission forces everyone spectator/dead.
+- Intermission clears readiness/sniper state, sets all players spectator/dead, sends `criresp_start`, and runs a three-second readiness sync. All assigned-ready accelerates `zb.START_TIME` to two seconds.
+- Round start assigns future teams. Suspects spawn immediately; SWAT/sniper spawn through 90-second per-player timers. A global 91-second timer grants a ram to one spawned SWAT.
+- Suspects outside a point-derived sniper AABB are repeatedly targeted by a world-fired physical `.338` bullet; cooldown scales with number outside.
+- Round end sends winner and four uint8 suspect statistics, cleans timers/state, restores armor visibility, and awards team results.
+
+### Network and customization contract
+
+- `criresp_start`: no payload; client opens menu and sends customization.
+- `criresp_ready`: no payload; server requires assigned player during state 0, then marks permanently ready for that intermission.
+- `criresp_readycount`: uint8 ready + uint8 total.
+- `criresp_begin`: no payload; client closes menu and starts presentation/audio.
+- `criresp_over20`: client/admin sends bool; server checks `IsAdmin()` and mutates replicated convar.
+- `criresp_custom`: client sends uint8 primary, bodygroup string, uint4 gear count, then uint8 gear IDs. Server bounds string to 48 chars, count to configured slots, IDs to gear list and de-duplicates; it does not restrict sender to assigned/SWAT/intermission, rate-limit updates, or validate bodygroup values/model compatibility before later application.
+- `cri_roundend`: uint4 winner, then uint8 killed/incapacitated/arrested/total; client reads exact order and locks gameplay input for 8.5 seconds.
+
+### Public surfaces and state
+
+- Convars: server `criresp_over20`; client `criresp_menumusic`, `criresp_menumusic_vol`, `criresp_loadout`, `criresp_gear`, `criresp_bodygroups`.
+- Player fields: `criresp_ready`, `criresp_custom`, `criresp_sniper`, `criresp_nextsnipe`, team/class/role/inventory/armor/bodygroups.
+- Mode/file locals: `assigned`, `sniperPly`, `shieldGiven`, `sniperZone`; global timer names `criresp_readysync`, `criresp_sniperzone`, `SWATSpawn`, and `SWATSpawn<EntIndex>`.
+- Client globals/reused state include `song`, `songfade`, and external menu globals referenced by HUD/end lock.
+- Physical bullet path depends on fake ragdoll/old ragdoll bone lookup and `FireLuaBullets`.
+
+### Verified defects and risks
+
+1. Dot-defined `GuiltCheck` receives the injected mode table first.
+2. Team cap and SWAT count use all connected players, including prior spectators/AFK users; assignment eligibility is not filtered through `zb:CheckPlaying()` despite launch using it.
+3. Sniper is deliberately excluded from SWAT alive count, so SWAT can be declared eliminated while its sniper remains alive.
+4. Winner conversion assumes shared `CheckWinner` returns `1` for SWAT and `2` for suspects; this mapping must be runtime-verified.
+5. `shieldGiven` is global to the round and determined by delayed SWAT spawn order; disconnected/failed shield holder can consume the sole slot.
+6. SWAT/sniper inventory code assumes `Inventory.Weapons` exists.
+7. Primary/sidearm/equipment and armor APIs remain partially guarded; bodygroup customization accepts arbitrary numeric tokens and applies them later.
+8. `criresp_custom` is callable at any phase by any client and lacks rate limits; stored customization persists until overwritten.
+9. Generic timer `SWATSpawn` can collide; per-player timers use current EntIndex and depend on explicit end cleanup.
+10. Sniper zone accepts any two point records, but if their `pos` values are missing the AABB can retain infinite bounds.
+11. If no external clear line is found, sniper source falls back only ~64 units horizontally from the target, undermining the intended outside sniper model and potentially firing from inside geometry.
+12. Sniper bullet attacker may be the sniper player while inflictor remains world; guilt/reward/kill attribution requires validation.
+13. Repeating sniper shots have no global budget and can scale with every suspect outside the zone every 0.5 seconds.
+14. Readiness has no unready/revoke path and can accelerate global round start as soon as every assigned entry sends once.
+15. The client mode is over 1,100 lines and combines settings, customization, readiness, gameplay HUD, audio and end screen, increasing UI lifecycle/hotload regression risk.
+16. Client end lock consumes attacks, movement, jump, duck, use, reload and selected binds for 8.5 seconds; interaction with global end-state input/camera handling is unverified.
+17. Resource font delivery and multiple sound/material paths are assumed present; no fallback presentation contract is documented.
+
+### Required validation
+
+Spectator/AFK/cap assignment; six-player minimum and over-20 toggle; all-ready acceleration and disconnect/reconnect; unready expectation; SWAT/suspect/sniper winner semantics; sniper-only SWAT survival; missing/malformed zone points; physical bullet attribution/performance/LOS; customization phase/rate/bodygroups/gear/shield; inventory/model/resource failures; timer cleanup/hotload; client input locks and UI/audio teardown.
 
 ## Next trace
 
 1. Enumerate unresolved Defense files and pair support/highlight/wave endpoints.
-2. Trace CO-OP persistence and changelevel owner files, then validate the round-hook name against all emitters.
-3. Trace HL2DM inherited/common team dependencies and airstrike integration.
-4. Continue remaining mode directories while updating the global inheritance and public-surface matrices.
+2. Trace CO-OP persistence/changelevel owner files and verify round-hook emitters.
+3. Trace Crisis Response readiness/team eligibility against shared playing-player APIs and packet limits.
+4. Continue unresolved mode directories while updating inheritance and public-surface matrices.
