@@ -45,6 +45,8 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 ### Integration records
 
 - [`integration/LOCAL_ARCHIVE_BASELINE.md`](integration/LOCAL_ARCHIVE_BASELINE.md) — immutable identity, structure, loader drift, project rename, subsystem families, bot shipping state, integration risks, and required repository-versus-archive delta for uploaded `Trauma.zip`.
+- [`integration/LOCAL_ARCHIVE_COMPARISON_MANIFEST.md`](integration/LOCAL_ARCHIVE_COMPARISON_MANIFEST.md) — complete reproducible local file/hash inventory, exact duplicate and binary evidence, bounded core-file comparison, and repository-side comparison limitation.
+- [`integration/local_archive_manifest/README.md`](integration/local_archive_manifest/README.md) — pinned archive/manifest identities and deterministic regeneration instructions.
 
 ### Living catalogs
 
@@ -65,7 +67,7 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 
 ## Dependency-ordered research queue
 
-1. Generate the complete repository-versus-local-archive path/hash delta and subsystem import classification.
+1. Obtain a recursive repository tree/archive and complete the repository-versus-local-archive classification.
 2. Complete weapon lifecycle, physical bullet, ammunition, projectile, armor, explosive, damage and presentation traces on both identified sources.
 3. Trace inventory, equipment, appearance and clothing ownership across round/class/fake/death transitions.
 4. Extend bot/NPC documentation into complete packet/public-surface/type/catalog coverage and enabled-runtime evidence.
