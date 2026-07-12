@@ -6,7 +6,7 @@
 **Status:** `partial / executable-source verified`  
 **Reviewed:** 2026-07-12
 
-This catalog records actual registration IDs, files, inheritance, lifecycle, data/network contracts, dependencies, verified defects, and validation. Directory names and client presentation entries are not treated as launchable modes until server registration is verified.
+This catalog records actual registration IDs, files, inheritance, lifecycle, network/data contracts, dependencies, verified defects, and validation. Directory names and client presentation entries are not treated as launchable modes until executable registration is verified.
 
 ## Verified dependency graph
 
@@ -15,16 +15,19 @@ zb.modes
 ├─ tdm                                  standalone base
 │  └─ cstrike                           MODE.base = "tdm"
 ├─ dm                                   standalone
-└─ hmcd                                 standalone registry entry
+└─ hmcd                                 standalone base registry entry
    ├─ standard                          server MODE.Types + SubModes
    ├─ wildwest                          server MODE.Types + SubModes
    ├─ gunfreezone                       server MODE.Types + SubModes
    ├─ soe                               server MODE.Types + SubModes
    ├─ suicidelunatic                    client presentation only in traced files
-   └─ supermario                        client presentation + server branch, but no verified server type registration
+   ├─ supermario                        client presentation + server branch, no verified server type registration
+   └─ fear                              MODE.base = "hmcd"
+      ├─ standard2                      inherited former `standard`
+      └─ soe2                           inherited former `soe`
 ```
 
-`zb:GetMode(submode)` maps a registered `MODE.Types` key back to its owning registry key. `RoundInfo` sends the base key (`hmcd`); Homicide separately sends its active `MODE.Type`.
+`zb:GetMode(submode)` maps a registered `MODE.Types` key back to its owning registry key. `RoundInfo` sends the base registry key; Homicide-family modes separately send their active `MODE.Type`.
 
 ## Summary matrix
 
@@ -33,175 +36,174 @@ zb.modes
 | `tdm` | `tdm` | none | `sh_tdm.lua`, `sv_tdm.lua`, `cl_tdm.lua` | unconditional `true` | teams, inventory, classes, roles, attachments, armor, weapons, map points |
 | `cstrike` | `tdm_cstrike` | `tdm` | `sh_cstrike.lua`, `sv_cstrike.lua`, `cl_cstrike.lua` | unconditional `true`; earlier point validator overwritten | TDM, bomb/hostage entities, organism, map points, harm tracking |
 | `dm` | `dm` | none | `sh_dm.lua`, `sv_dm.lua`, `cl_dm.lua` | unconditional `true` | organism, appearance, armor, weapons, zone globals, entity iteration, harm tracking |
-| `hmcd` | `homicide` | none | `sh_homicide.lua`, `sv_homicide.lua`, `cl_homicide.lua` | unconditional `true`; four server submodes use chance functions | organism, fake ragdoll, appearance, inventory, classes, roles, loot, weapons, persistence |
+| `hmcd` | `homicide` | none | `sh_homicide.lua`, `sv_homicide.lua`, `cl_homicide.lua` | unconditional `true`; four verified server submodes | organism, fake ragdoll, appearance, inventory, classes, roles, loot, weapons, persistence |
+| `fear` | `homicide_fear` | `hmcd` | `core/sh_fear.lua`, `core/sv_fear.lua`, `core/cl_fear.lua`, `sv_scary_black_guy.lua` | hard-disabled (`CanLaunch() == false`) | all Homicide contracts, light sampling, disappearance/afterlife state, props, sounds, scare entities/bots |
 
 ---
 
 ## `MODE-tdm` — Team Deathmatch
 
-### Files and metadata
+### Contract
 
-- `sh_tdm.lua` blob `1aa70fac82fc2556b71e0ada95a0b6b931eabfdc`.
-- `sv_tdm.lua` blob `5dfaa969145a20912b76a278ea6e861fc0196c83`.
-- `cl_tdm.lua` blob `c6e4254634502d2055c105ae321fd27e75b46a42`.
-- `PrintName = "Team Deathmatch"`; `BuyTime = 40`; `StartMoney = 6500`; `start_time = 20`; `ROUND_TIME = 240`; `Chance = 0.04`; `ForBigMaps = true`; `buymenu = true`.
-- Map points `HMCD_TDM_CT`/`HMCD_TDM_T` are registered, but current `CanLaunch()` returns true without checking them.
-
-### Lifecycle and buy contract
-
-1. `Intermission()` cleans the map, resets teams/money, and broadcasts `tdm_start` without fields.
-2. Client `tdm_start` reads a string into `zb.rtype`, starts music, and removes fade.
-3. `GiveEquipment()` sets class/role/cosmetics/inventory and baseline equipment.
-4. `RoundStart()` unfreezes players; `ShouldRoundEnd()` delegates to alive-team winner logic; `EndRound()` awards results and broadcasts `tdm_roundend`.
-5. Client sends `tdm_buyitem` as `{category, itemName}` or `{category, itemName, attachmentID}`. Server re-resolves item and checks time/money/weapon ownership, but not alive state, rate/size, `TeamBased`, or attachment membership.
+- Files: `sh_tdm.lua` `1aa70fac...`; `sv_tdm.lua` `5dfaa969...`; `cl_tdm.lua` `c6e42546...`.
+- `BuyTime=40`, `StartMoney=6500`, `start_time=20`, `ROUND_TIME=240`, `Chance=.04`, `ForBigMaps=true`, `buymenu=true`.
+- `Intermission()` cleans map, resets teams/money and broadcasts `tdm_start` without fields. Client reads a string, starts music and removes fade.
+- Equipment sets class/role/cosmetics/inventory; winner uses alive-team logic; end awards results and sends `tdm_roundend`.
+- Buy request is `{category,itemName[,attachmentID]}`. Server checks mode/time/catalog/money/weapon ownership but not alive state, rate/size, `TeamBased`, or attachment membership.
 
 ### Verified defects
 
-- Base TDM `tdm_start` sender/receiver schema mismatch; Counter-Strike writes the string expected by the inherited receiver.
-- Dot-defined `MODE.GuiltCheck(Attacker, ...)` receives dispatcher-injected mode table as its first argument.
-- Arbitrary client attachment IDs can reach `hg.AddAttachmentForce`; `TeamBased` metadata is not enforced.
-- Opening movement is suppressed through both mode movement logic and a client `StartCommand` hook.
-- Empty public callbacks may suppress intended fallback behavior.
+- Base `tdm_start` schema mismatch; CStrike happens to write the string expected by the inherited receiver.
+- Dot-defined `GuiltCheck` receives dispatcher-injected mode table as its first argument.
+- Arbitrary attachment IDs reach `hg.AddAttachmentForce`; `TeamBased` is ignored.
+- Opening movement lock is duplicated; empty callbacks may suppress fallback behavior.
 
-### Required validation
+### Validation
 
-Dedicated-server cycle; missing points; team balance/disconnect/incapacitation; packet capture; malformed/oversized/rate-limited purchases; attachment allowlist; wrong-team/dead-player purchase; movement prediction under latency.
+Full cycle; missing points; team/disconnect/incapacitation; packet capture; malformed/oversized/rate-flooded purchases; attachment allowlist; wrong-team/dead-player purchase; latency/prediction.
 
 ---
 
-## `MODE-cstrike` — Counter-Strike multi-round TDM derivative
+## `MODE-cstrike` — Counter-Strike TDM derivative
 
-### Files, inheritance, and lifecycle
+### Contract
 
-- `sh_cstrike.lua` blob `66a341d157a06b6c09bffd5a4ad34e22570e4ffc`: `base = "tdm"`, `name = "cstrike"`, map-point registrations.
-- `sv_cstrike.lua` blob `f194fe0a1693e31f796de705572d4b8dcd03a0ad`: lifecycle, objectives, series state, economy.
-- `cl_cstrike.lua` blob `843e2b89ed0431ccbf044c11853881a0e531e13a`: inherited HUD extension.
-- `KillMoney = 1000`; `StartMoney = 1000`; `start_time = 20`; `Rounds = 5`; `ROUND_TIME = 240`; `CooldownRounds = 5`; `ForBigMaps = false`.
-- `Intermission()` chooses bomb/hostage, sends objective points, spawns objective after three seconds, writes round type through inherited `tdm_start`, and sends `CS_Intermission`.
-- `RoundStartPost()` queues another `cstrike` round; `EndRound()` computes objective winner, pays teams, emits `tdm_roundend`/`CS_Roundover`, tracks series wins, and clears state when leaving.
-
-### Public state
-
-Channels `CS_Intermission`, `CS_Killfeed`, `CS_Roundover` plus inherited TDM channels; convar `zb_killfeed`; command `tdm_setrounds`; project command `nextcsround`; `zb.RoundsLeft`, `zb.Winners`, `zb.rtype`, `zb.nextcsround`, bomb/hostage globals; global `HostageInZone` and `winreason` assignment.
+- Files: `sh_cstrike.lua` `66a341d1...`; `sv_cstrike.lua` `f194fe0a...`; `cl_cstrike.lua` `843e2b89...`.
+- `base="tdm"`, `Rounds=5`, `ROUND_TIME=240`, multi-round bomb/hostage objectives and inherited buy/start/end surfaces.
+- Intermission chooses objective, sends points, spawns objective after delay, writes round type via `tdm_start`, and sends `CS_Intermission`.
+- `RoundStartPost()` queues another `cstrike`; end computes objective winner, pays teams, sends `CS_Roundover`, tracks series wins and clears state when leaving.
 
 ### Verified defects
 
-- A point-validating `CanLaunch()` is overwritten by a later unconditional definition.
-- Delayed objective spawning indexes `team_t[math.random(#team_t)]`; empty teams can call `math.random(0)`.
-- `CS_Roundover` writes numeric winner `0|1|3` through `net.WriteBool`; all numeric values are truthy in Lua, so team identity is lost.
+- Point-validating `CanLaunch()` is overwritten by unconditional `true`.
+- Empty team can cause `math.random(0)` during delayed objective assignment.
+- Numeric winner `0|1|3` is written with `net.WriteBool`, collapsing identity because all Lua numbers are truthy.
 - Unsorted directory order can register child before base.
-- Multi-round state is split between mode and global round selection, creating off-by-one/cleanup risk.
-- `HarmDone` pays `amt * KillMoney`, behaving as damage-based economy despite the name.
-- Objective creation assumes valid players, entities, organism state, and points.
+- Multi-round state spans mode/global selection and is vulnerable to off-by-one/cleanup errors.
+- `HarmDone` pays damage amount times `KillMoney`; objective/entity/organism/point validity is assumed.
 
-### Required validation
+### Validation
 
-Reversed registration order; missing point permutations; zero-player/one-team start; bomb and hostage outcomes; all packet schemas; exact series count; reconnect/team persistence; money bounds/friendly fire; mode exit/re-entry cleanup.
+Reverse registration order; missing point combinations; zero/one team; bomb/hostage outcomes; packet matrix; exact series count; reconnect/team preservation; economy bounds; mode exit/re-entry cleanup.
 
 ---
 
-## `MODE-dm` — Free-for-all Deathmatch with shrinking zone
+## `MODE-dm` — Deathmatch with shrinking zone
 
-### Files and lifecycle
+### Contract
 
-- `sh_dm.lua` blob `04291057292379f244b13eabc7a17170447d32c4`: zone radius and opening attack suppression.
-- `sv_dm.lua` blob `f645861dedac8c5e6d0ff5159cae00c369a71d87`: `name = "dm"`, lifecycle, loadouts, server zone processing.
-- `cl_dm.lua` blob `4e7cce0fd01c100e8a687974f10609ebe7429a8e`: zone rendering/audio/end UI.
-- `Intermission()` averages non-spectator positions into `zonepoint`, chooses farthest distance, and sends `dm_start` vector+float.
-- One loadout is selected for all alive players. A server `Think` hook scans all entities every 0.5 seconds after the opening lock, stunning players, blasting doors, and dissolving props outside the zone.
-- Round ends with one or fewer alive; `dm_end` sends winner and most-violent entities.
+- Files: `sh_dm.lua` `04291057...`; `sv_dm.lua` `f645861d...`; `cl_dm.lua` `4e7cce0f...`.
+- Intermission averages non-spectator positions to form a zone and sends vector+float. One loadout is selected for all alive players.
+- Server scans all entities every .5 seconds while active, stunning players, blasting doors and dissolving props outside the zone.
+- End condition is one-or-fewer alive; `dm_end` sends winner and most-violent entity.
 
 ### Verified defects
 
-- No participants causes `centerpoint:Div(0)`.
-- Zone state uses unscoped globals on both realms and can remain stale across rounds/hotload.
-- Zone hooks fall through when `CurrentRound()` is nil and may use unset state.
-- Full entity sweep every 0.5 seconds has no spatial partition or budget.
-- Delayed player callback lacks `IsValid`; winner and most-violent player may receive duplicate full rewards.
-- Missing zone state returns `0xFFFFFFFF`, hiding initialization failure.
-- Remote-music/global remnants remain in client code.
+- No participants causes division by zero.
+- Unscoped zone globals can remain stale; hooks fall through when `CurrentRound()` is nil.
+- Full entity sweep has no partition/budget.
+- Delayed player callback lacks validity; winner and most-violent may receive duplicate rewards.
+- Missing zone state returns `0xFFFFFFFF`, masking initialization failure; remote-music/global remnants remain.
 
-### Required validation
+### Validation
 
-Zero/one/many players; spectator-only/reconnect; zone on/off; full shrink; entity stress; stale state across mode changes; loadout failures; duplicate-reward identity; audio cleanup.
+Zero/one/many players; spectator-only/reconnect; zone on/off and full shrink; entity stress; stale state across mode changes; loadout failure; duplicate reward; audio cleanup.
 
 ---
 
 ## `MODE-hmcd` — Homicide base and submode family
 
-### Files and registration
+### Contract
 
-- `sh_homicide.lua` blob `79d5b5e889ed17dec6c38dfb7e389695e0d83803`.
-- `sv_homicide.lua` blob `af101a8e73b170ca67e5a8c951ec83dd0655e0c8`.
-- `cl_homicide.lua` blob `6e15a2b3eae790d1e9525c78a5344f3efcfd1de3`.
-- `start_time = 1`; `end_time = 7`; `ROUND_TIME = 600`; random/override spawn, freeze, loot flags enabled; `Chance = 0.2`; unconditional `CanLaunch()`.
-- Server `SubModes()` returns only `soe`, `standard`, `wildwest`, and `gunfreezone`.
-- Client presentation also defines `suicidelunatic` and `supermario`; the traced server file has a `supermario` branch but no verified `MODE.Types.supermario`/`suicidelunatic` definition. These are `Legacy Claim`/unresolved, not verified launchable submodes.
+- Files: `sh_homicide.lua` `79d5b5e8...`; `sv_homicide.lua` `af101a8e...`; `cl_homicide.lua` `6e15a2b3...`.
+- `start_time=1`, `end_time=7`, `ROUND_TIME=600`, chance `.2`, random/override spawn and loot enabled, unconditional launch.
+- Verified server submodes: `soe`, `standard`, `wildwest`, `gunfreezone`. Client also presents `suicidelunatic`/`supermario`, but no verified server registrations exist.
+- Owns traitor/gunner/police/subrole/profession state, reinforcement timing, role selection, words, persistence and broad organism/inventory/class/equipment mutations.
 
-### State and lifecycle
+### `HMCD_RoundStart`
 
-- Player state: `isTraitor`, `isGunner`, `isPolice`, `MainTraitor`, `SubRole`, `Profession`, appearance/organism/inventory/class mutations.
-- Mode state: active type, police timing/reinforcement counters, role-selection list/timers, traitor words/count, next-round traitor requests.
-- `Intermission()` chooses/accepts a server submode, kills/resets non-spectators, chooses traitor words, calculates traitor count, and assigns roles.
-- `RoundStart()` either opens role selection or calls `SpawnPlayers`; role selection is currently impossible because `ShouldStartRoleRound()` hard-returns false.
-- Police/SWAT/National Guard convert eligible dead players after timers. `EndRound()` captures traitor/gunner arrays, clears role flags, awards outcomes, emits `ZB_TraitorWinOrNot`, and sends `hmcd_roundend`.
+Ordered payload: traitor bool; gunner bool; type string; screen-default bool; subrole string; main-traitor bool; two word strings; uint traitor count; conditional color+name roster; profession string. The count includes all traitors, while roster entries require `CurAppearance`; a missing appearance underwrites the packet and shifts later reads. There is no version or independent roster count.
 
-### `HMCD_RoundStart` contract
-
-Server writes to each player:
-
-1. traitor bool;
-2. gunner bool;
-3. type string;
-4. `screen_time_is_default` bool (traced normal spawn writes `true`);
-5. subrole string;
-6. main-traitor bool;
-7. two traitor-word strings or empty strings;
-8. uint(`TraitorExpectedAmtBits`) traitor count;
-9. for a main traitor, color+name entries;
-10. profession string.
-
-Client reads the same order, but loops exactly the transmitted traitor count for main-traitor entries. The server count includes every traitor while the entry list includes only traitors with `CurAppearance`; one missing appearance underwrites the list and causes the client to decode profession/remaining bytes as color/name data. The packet has no version, branch discriminator beyond existing booleans, entry count separate from traitor count, or recovery boundary.
-
-A delayed `HMCD_UpdateTraitorAssistants` packet separately sends uint8 entry count followed by color, name, and SteamID for each assistant. Spawn/death hooks rebuild and resend it to main traitors; the client receiver has not yet been located in verified files.
-
-### Other verified payloads
-
-- `HMCD(StartPlayersRoleSelection)`: server sends role string to main traitor; client opens role UI; client acknowledges on the same channel with no payload; server only removes sender from `ChoosingPlayersList`.
-- `HMCD(EndPlayersRoleSelection)`: no payload; client closes panel.
-- `HMCD(SetSubRole)`: client reads one string; sender/validation unresolved.
-- `HMCD_TraitorDeathState`: appearance name string + alive bool to main traitors.
-- `HMCD_RequestTraitorStatuses`: no client payload; server requires traitor+main-traitor and replies with death-state packets.
-- `hmcd_roundend`: uint traitor count/entities then uint gunner count/entities. Client assigns flags to each read entity without validating entity validity.
+Other verified surfaces include role-selection start/end, subrole, traitor death/status, assistant updates and `hmcd_roundend` entity arrays.
 
 ### Verified defects
 
-1. Role selection hard-returns false; its configured workflow is unreachable.
-2. Requested-main-traitor command writes state whose selection consumer is commented out.
-3. Reset hook waits for stale state `2`; verified round lifecycle ends at `3`, and the hook emitter remains unverified.
-4. Standard/wildwest police attachment calls use undefined `gun` before declaration instead of `glock`.
-5. `if math.random(0,1)` always succeeds because `0` is truthy.
-6. `SpawnForce` compares possibly nil `afkTime2 > 60`.
-7. `HMCD_RoundStart` can desynchronize when traitor count and appearance-backed entry count differ.
-8. Client-only extra submodes and the server `supermario` branch appear unreachable from the verified server type registry.
-9. Helpers and dot-defined functions become hook candidates and may receive shifted arguments.
-10. `hmcd_roundend` registration is duplicated; client trusts read entities.
-11. Reinforcement equipment assumes every `Give` returns a valid weapon before ammo/attachment calls.
-12. Round start/end directly mutates many external systems, so local mode validation cannot establish integration safety.
+1. Role selection hard-returns false.
+2. Requested-main-traitor consumer is commented out.
+3. Reset listens for stale round state `2` rather than verified end state `3`.
+4. Police attachment code uses undefined `gun` before declaration; `if math.random(0,1)` is always truthy.
+5. `SpawnForce` compares possibly nil `afkTime2`.
+6. `HMCD_RoundStart` can desynchronize on missing appearance.
+7. Extra client submodes appear unreachable.
+8. Helpers/dot-defined functions become hook candidates; registrations are duplicated; entities/equipment are assumed valid.
+9. Start/end mutate many systems, so local testing cannot establish integration safety.
+
+### Validation
+
+Pair every packet branch; test missing appearances and assistant counts; verify all role/reinforcement paths and submodes across population/AFK/disconnect/incapacitation/equipment failures; classify every function; resolve stale client-only types.
+
+---
+
+## `MODE-fear` — Homicide2 / Fear derivative
+
+### Files, inheritance and launch state
+
+- `core/sh_fear.lua` blob `9797dd2cde5ffccdb4e231be80311a96630173f5`: `base="hmcd"`, `name="fear"`, event registry, per-player event hooks/timers and disappearance collision rule.
+- `core/sv_fear.lua` blob `bbc02e7223f5e4fbcacae87c49471b1bf6254daa`: hard-disables launch, converts inherited `standard`/`soe` to `standard2`/`soe2`, removes other inherited types, runs horror lifecycle/victim selection.
+- `core/cl_fear.lua` blob `e53fdb48d83e61555932931a68e488f47109edc3`: disappearance rendering, client light sampling, afterlife effects/audio and ambient fear timers.
+- `sv_scary_black_guy.lua` blob `ea9c96fe21fc79cd067328eb11a635d7d54297e0`: registers event `scary_black_guy` that spawns an `ent_zc_anim` visible only to one victim.
+- `CanLaunch()` returns false; mode is force/admin-only unless another system overrides eligibility.
+
+### Lifecycle and state
+
+- `AfterBaseInheritance()` aliases inherited Homicide types then removes originals; unsorted base registration remains a hard dependency.
+- Intermission kills/resets players, selects only `standard2|soe2`, disables police, starts global random-environment timers and sends a Homicide-compatible round-start branch only if inherited role-selection logic says so.
+- No traitors are selected (`traitors_needed=0`). Round ends only when no alive players remain.
+- `RoundThink()` calls `self.BaseClass.RoundThink(self)`, periodically asks all clients to sample one target's light color, selects a victim, then kills, prop-attacks, breaks neck, starts scare event, disappears, creates `bot_fear`, or manipulates suicide behavior.
+- Disappearance disables collision/visibility and may transition into a timed afterlife; return-to-life uses recurring visibility checks.
+- Client suppresses shadows/sounds, samples render light, applies post-processing/ghost audio, ambient sounds and last-survivor effects.
+
+### Network and public surfaces
+
+- `check_lightness` is bidirectional: server broadcasts target entity; every client returns a vector. Server accepts one response per client while a global `checkedPlayer` is set and lerps all responses into that player's light color.
+- Player network state: `disappearance`, local `afterlife` start, NWFloat `willsuicide`, collision rules, `lightcolor` and average velocity/harm heuristics.
+- Dynamic hooks/timers: `Think/ScareThatGuy<UserID>`, `PlayerUse/dooruse<EntIndex>`, global timer names such as `WaitForRandomStuff`, `FearRandomStuff`, `Fear_End`, `FearSounds`, `fear*`, `disappearance <EntIndex>`, `Afterlife <EntIndex>`, `ReturnToLife <EntIndex>`.
+- External surfaces: `ent_zc_anim`, `bot_fear`, `hg.BreakNeck`, fake ragdoll, visibility/light APIs, `SendLua`, sound files and global stations/notification flags.
+
+### Verified defects and risks
+
+1. **Inheritance/load-order hazard:** Fear cannot initialize correctly if `hmcd` is not already registered; mode-directory order is unsorted.
+2. **Hard-disabled but globally active hooks:** direct hooks in loaded Fear files can exist even when the mode is not launchable; each must be verified as mode-gated.
+3. **Nil event crash:** `StartEvent(name)` copies `MODE.Events[name]` and immediately calls it without validating existence.
+4. **Ignored start failure:** `StartScare()` can return false, but caller keeps an event entry/hook.
+5. **Event cleanup leak:** event `StopScare()` removes its entity but does not clear `MODE.StartedEvents` or its Think hook directly.
+6. **Scare timer validity bug:** delayed callback returns when player is valid/alive, then calls `ply:SendLua` only when invalid/dead, risking method access on invalid player.
+7. **Entity validity assumptions:** `ent_zc_anim`, `bot_fear`, door selection, physics objects, bone matrices and active weapon traces are used without complete validation. `RandomStuff()` can dereference `door` when none was found.
+8. **Typo breaks victim selection:** calculation assigns `vicitm` (misspelled) and returns it; the initially chosen local `victim` is never returned. Selection can be nil or stale global.
+9. **Client-authoritative light data:** any client can submit a bounded RGB vector for the global current target; server averages untrusted values without target identity, proximity, visibility, rate attribution or authoritative sampling.
+10. **Global response race:** `checkedPlayer`/`checkPlayers` are shared across all clients and reset after .5 seconds; latency/order changes victim darkness assessment.
+11. **Return-to-life logic flaw:** it captures the alive-player list once; within the loop, the first player who is not looking causes immediate return even if another player is looking.
+12. **Unbounded expensive scans:** `RandomStuff()` traverses all entities, and prop-kill repeatedly scans nearby entities/physics; hooks/timers are global-name based.
+13. **Global side effects:** scare event uses `SendLua("stopsound")` and fades every player for one victim; client uses global stations/flags and aggressive post-processing.
+14. **Sound callback assumes channel validity:** `sound.PlayFile` callbacks call channel methods without validating channel in multiple paths.
+15. **Last-player instant kill:** when one player remains, RoundThink kills them directly; core round winner/result semantics are bypassed.
+16. **Base lifecycle coupling:** Fear calls inherited Homicide `RoundThink` despite replacing role setup/end semantics; all inherited side effects need explicit audit.
+17. **Timer and UserID reuse:** event state keyed by UserID and names based on EntIndex/UserID can collide across reconnects/hotload.
+18. **Rendering state ownership:** client shadow suppression toggles entity/player/weapon shadows but has no centralized restoration pass for disconnect/mode change/error.
 
 ### Required validation
 
-- Exhaustively pair every sender/receiver and conditional packet branch.
-- Test `HMCD_RoundStart` with traitors missing appearance and zero/one/many assistants.
-- Locate/verify assistant, police-role, subrole, and role-selection response consumers.
-- Run each verified server submode at minimum/typical/high populations, nil AFK/appearance/inventory/organism, disconnect/incapacitation/spectator, and failed equipment grants.
-- Verify traitor/gunner/profession invariants, all reinforcement types, end arrays, and every function classification.
-- Determine whether `suicidelunatic`/`supermario` are defined in another loaded file or are stale client-only content.
+- Force-load with Fear before/after HMCD and compare registry/types/callback sets.
+- Confirm no Fear hooks/effects execute while another mode is active.
+- Fuzz unknown/missing events and failed entity creation.
+- Validate every dynamic timer/hook is removed on death, disconnect, end, cleanup and hotload.
+- Replace/validate light sampling against malicious, delayed and missing clients; verify one authoritative target and schema.
+- Test no-door maps, invalid physics/bones/weapons, one/many players, disappearance visibility groups, afterlife return, sound failures and rendering restoration.
+- Trace inherited Homicide callbacks and packets to determine which are intentionally retained versus accidental.
 
 ## Next mode trace
 
-1. Locate unresolved Homicide channel endpoints and any external type augmentation.
-2. Discover actual files/registration for `homicide_fear` through repository evidence.
-3. Trace Counter-Strike bomb/hostage entities and unresolved CS receivers.
-4. Continue remaining mode directories using actual filenames and registration IDs.
-5. Produce complete inheritance/load-order and mode-function collision matrices.
+1. Complete Counter-Strike bomb/hostage entity/client contracts and unresolved Homicide channel endpoints.
+2. Build the complete mode-function classification/collision matrix.
+3. Build a cross-mode packet matrix with writer, reader, ordered schema, validation, limits and legacy/duplicate status.
+4. Continue remaining actual mode directories and resolve client-only/unreachable registrations.
