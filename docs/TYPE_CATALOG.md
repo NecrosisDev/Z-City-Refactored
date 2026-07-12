@@ -34,15 +34,15 @@ Shared contracts are recorded only after confirming definitions and multiple con
 
 - **Kind:** extensible table/object contract.
 - **Authority/owner:** Each mode source populates temporary global `MODE`; `SYS-MODE-REGISTRY` finalizes and stores it.
-- **Definition paths:** all `gamemodes/zcity/gamemode/modes/**`; registration/consumers traced in `loader.lua`, `sv_roundsystem.lua`, and `cl_init.lua`. Complete per-mode inventory pending.
+- **Definition paths:** all `gamemodes/zcity/gamemode/modes/**`; registration/consumers traced in `loader.lua`, `sv_roundsystem.lua`, and `cl_init.lua`.
 - **Registration-required:** `name: string` is used as the registry key and network-visible current mode identifier. A completely empty table is skipped.
 - **Registry-managed:** `saved: table` is preserved across hotload and reset during round preparation; inherited tables may be copied; every function-valued member is added to mode-hook dispatch.
 - **Verified optional metadata:** `base: mode name`; `PrintName`; `Description`; `Types: table`; `Type`; `Chance`; `ForBigMaps`; `SubModes`; timing values such as `start_time`/`end_time`; `shouldfreeze`.
-- **Verified optional callbacks:** `AfterBaseInheritance`, `SetupChances`, `CanLaunch`, `ChanceFunction`, `RoundStart`, `RoundStartPost`, `RoundThink`, `ShouldRoundEnd`, `BoringRoundFunction`, `EndRound`, `Intermission`, `GiveEquipment`, `DontKillPlayer`. Some call sites assume selected modes implement specific lifecycle methods; defaults/inheritance must be traced before classifying them as universally required.
+- **Verified optional callbacks:** `AfterBaseInheritance`, `SetupChances`, `CanLaunch`, `ChanceFunction`, `RoundStart`, `RoundStartPost`, `RoundThink`, `ShouldRoundEnd`, `BoringRoundFunction`, `EndRound`, `Intermission`, `GiveEquipment`, `DontKillPlayer`. The complete known function surface is now classified in `reference/MODE_FUNCTION_MATRIX.md`.
 - **Realm/transport:** Separate tables execute in their routed realms; only the mode name/state and selected supporting data are networked, not the table itself.
 - **Invariants:** Base mode must already be registered before inheritance; server/client definitions for a mode name must be compatible; function names participate in global hook dispatch even when intended as helpers.
 - **Compatibility rules:** Additive data fields are generally safe if names do not collide with hook names; function additions can create new hook registrations; renaming/removing lifecycle functions or mode IDs is breaking; nested inherited tables require copy/ownership review.
-- **Validation:** Generate a per-mode schema matrix from all sources and consumers, detect absent consumer-assumed callbacks, unresolved bases, server/client differences, duplicate names, function/hook collisions, and mutable table aliasing.
+- **Validation:** Compare registry schemas, absent consumer-assumed callbacks, unresolved bases, server/client differences, duplicate names, function/hook collisions and mutable table aliasing.
 - **Related:** `SYS-MODE-REGISTRY`, `SYS-ROUND-LIFECYCLE`, `BEH-MODE-DISPATCH`, `BEH-MODE-SELECTION`.
 - **Last verified:** loader blob `b1754dff2d53012a05cb109f26b75eae118b14ce`; round blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`; client blob `fa61811ef802529d54abe2cf1cc72a936ba15590`; 2026-07-12.
 
@@ -67,12 +67,12 @@ Shared contracts are recorded only after confirming definitions and multiple con
 - **Authority/owner:** Server `SYS-ROUND-LIFECYCLE` writes; client round receiver reads.
 - **Definition paths:** server `sv_roundsystem.lua`; client `cl_init.lua`.
 - **Channel:** `RoundInfo` registered server-side with `util.AddNetworkString`.
-- **Ordered fields:** `1. modeName: string` written from `mode.name or "hmcd"`; `2. roundState: signed 4-bit integer` from `TYPE-ROUND-STATE`.
+- **Ordered fields:** `1. modeName: string`; `2. roundState: signed 4-bit integer`.
 - **Send conditions:** round start, round end, end-to-pre-round transition, and `PlayerInitialSpawn` when `zb.CROUND` exists.
-- **Client effects:** emits `hook.Run("RoundInfoCalled", modeName)` before assigning mode; stops dynamic music when mode changes; stores `zb.CROUND` and `zb.ROUND_STATE`; applies fade for `0`; invokes local mode `RoundStart` for `1` or `EndRound` for `3` when the mode exists.
-- **Invariants:** Field order and bit width must match exactly; mode names must exist in the client `TYPE-MODE-REGISTRY`; server remains authoritative.
-- **Compatibility rules:** Any field insertion/reordering/type/width change is breaking unless both sender and receiver migrate atomically; unknown mode handling must remain safe.
-- **Validation:** Packet capture/log wrapper comparing writes/reads, late-join state, unknown mode name, each valid state, and repeated identical broadcasts.
+- **Client effects:** emits `RoundInfoCalled`, updates local mode/state, applies fade and invokes local mode lifecycle callbacks.
+- **Invariants:** Field order and bit width must match exactly; mode names must exist clientside; server remains authoritative.
+- **Compatibility rules:** Any field insertion/reordering/type/width change is breaking unless both sender and receiver migrate atomically.
+- **Validation:** Packet capture/log wrapper comparing writes/reads, late join state, unknown mode name, each valid state and repeated broadcasts.
 - **Related:** `SYS-ROUND-LIFECYCLE`, `BEH-ROUND-CYCLE`, `TYPE-MODE-REGISTRY`, `TYPE-ROUND-STATE`.
 - **Last verified:** server blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`; client blob `fa61811ef802529d54abe2cf1cc72a936ba15590`; 2026-07-12.
 
@@ -80,12 +80,43 @@ Shared contracts are recorded only after confirming definitions and multiple con
 
 - **Kind:** registry/list plus network payload family.
 - **Authority/owner:** Server `SYS-ROUND-LIFECYCLE`.
-- **Definition paths:** `sv_roundsystem.lua`; client/admin consumers not yet fully traced.
+- **Definition paths:** `sv_roundsystem.lua`; client/admin consumers partially traced.
 - **Server fields:** `zb.RoundList: array<string>`; `zb.nextround: string|nil`; `zb.QueuedModes: array<string>`; `zb_forcemode: string convar` using `random` as disabled state.
-- **Verified messages:** server-to-admin `ZB_SendRoundList` writes table, next-round string, force-mode string; client-to-server `ZB_UpdateRoundList` reads table then boolean; request/notification and additional queue/mode admin messages are registered/consumed in the round system.
-- **Invariants:** List entries should resolve through the mode registry or submode mapping; setting a non-empty new list removes its first entry into `zb.nextround`; empty input rerolls; forced mode overrides random choice.
-- **Trust/validation:** Receivers require `ply:IsAdmin`, but the traced update path does not validate table shape/length/IDs and reads `forceUpdate` without using it.
-- **Compatibility rules:** Validate and bound all client-supplied tables before future expansion; preserve mode IDs across persistence/UI; migrate all admin clients with payload changes.
-- **Validation:** Trace client definitions, fuzz authorized payload shape/size/unknown IDs, verify unauthorized rejection, deterministic queue order, force reset, and synchronization to all admins.
+- **Verified messages:** server-to-admin `ZB_SendRoundList` writes table, next-round string, force-mode string; client-to-server `ZB_UpdateRoundList` reads table then boolean; overlapping legacy queue protocols remain.
+- **Invariants:** Entries should resolve through mode/submode registries; non-empty replacement removes its first entry into `zb.nextround`; empty input rerolls; force mode overrides random selection.
+- **Trust/validation:** Admin checks exist, but client tables lack shape/length/ID/duplicate bounds and overlapping receivers make effective behavior runtime-dependent.
+- **Compatibility rules:** Validate/bound tables, preserve mode IDs, and migrate every admin client atomically.
+- **Validation:** Fuzz payloads, verify unauthorized rejection, deterministic order, force reset and synchronization.
 - **Related:** `SYS-ROUND-LIFECYCLE`, `BEH-MODE-SELECTION`, `TYPE-MODE-REGISTRY`.
 - **Last verified:** server blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`, 2026-07-12.
+
+## `TYPE-ORGANISM-STATE` — Authoritative physiological state table
+
+- **Kind:** mutable extensible table/state machine.
+- **Authority/owner:** Server `SYS-ORGANISM`; one table may be shared by player, fake ragdoll and death ragdoll.
+- **Definition paths:** `organism/tier_0/sv_tier_0.lua` creates identity fields; `tier_1/sv_organism.lua` resets canonical fields; modules, damage, modes, classes, weapons and medical systems extend/mutate it.
+- **Required identity:** `owner: Entity`, `ownerX: Entity`; registry ownership through `hg.organism.list[entity]`.
+- **Verified state groups:** lifecycle; consciousness/control; cardiovascular; respiratory; pain/drugs; movement/energy; bones/organs; limbs/dislocations/amputations; wounds; environment/metabolism; mode/class extensions; replication timing.
+- **Nested structures:** stamina table; O2 table; left/right lung tables; wound/arterial-wound arrays; damage stack; lodged entities; optional mode/integration tables.
+- **Lifecycle:** `Add` creates/attaches; `Org Clear` resets in place; `Org Transfer` changes owner; fake/death ragdolls can alias the same table; entity removal clears registry entry.
+- **Invariants:** exactly one authoritative owner generation should exist; `owner.organism` must reference the table; required module fields must exist before the 10 Hz tick; client copies are non-authoritative.
+- **Current compatibility issue:** There is no explicit schema/version/extension registry. Fields are duplicated across reset, replication, client interpolation and external consumers.
+- **Validation:** Generate runtime schemas after clear and during each owner transition; reject missing/wrong-type fields; compare mode/class extensions; test aliasing and delayed callbacks.
+- **Related:** `SYS-ORGANISM`, `BEH-ORGANISM-LIFECYCLE`, `TYPE-ORGANISM-SNAPSHOT`.
+- **Last verified:** Tier 0 blob `1b8a72186b295f3542dd90d92374d5985d7d6e62`; Tier 1 blob `4830503722f005d27373047d8db5c58d4e217559`; 2026-07-12.
+
+## `TYPE-ORGANISM-SNAPSHOT` — `organism_send` replication payload
+
+- **Kind:** ordered header plus unversioned Lua-table payload.
+- **Authority/owner:** Server `SYS-ORGANISM`; client receiver in `tier_1/cl_statistics.lua`.
+- **Channel:** `organism_send`.
+- **Ordered fields:** `1. table snapshot`; `2. bool force`; `3. bool spectatorProtection`; `4. bool moreInfo`; `5. bool add/merge`.
+- **Snapshot variants:** owner/full-field whitelist; PVS/bare whitelist; developer-mode entire organism table; immediate partial merge tables.
+- **Send cadence:** generally one second for living players/owner snapshots and one to three seconds for nearby observer snapshots, plus damage/event-triggered sends.
+- **Client behavior:** reads owner from table, creates/merges old/new state, optionally replaces on `force`, and mirrors copies to fake ragdoll for interpolation/presentation.
+- **Trust/privacy:** Server authoritative but table shape/version is implicit; PVS observers receive sensitive physiology fields; developer mode can expose arbitrary extension data.
+- **Known defects:** client method call on owner before `IsValid`; copies existing state before confirming it exists; Lua-table cost scales with organism count; partial/full semantics are represented by booleans rather than explicit message variants; wounds also travel through NetVars.
+- **Compatibility rules:** Any field/type/branch change can break interpolation/UI; future migration requires versioned payload and public/private field sets.
+- **Validation:** Packet capture for every branch, invalid owner/table tests, size/cadence population tests, PVS/spectator exposure and compatibility replay.
+- **Related:** `SYS-ORGANISM`, `TYPE-ORGANISM-STATE`, `reference/PACKET_MATRIX.md`.
+- **Last verified:** server blob `4830503722f005d27373047d8db5c58d4e217559`; client blob `c3c5db65d44125a2acf5df4be1b6fe13d891a86f`; 2026-07-12.
