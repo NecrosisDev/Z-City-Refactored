@@ -40,11 +40,16 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 - [`TYPE_CATALOG.md`](TYPE_CATALOG.md) — shared tables, registries, identifiers, payloads, schemas, and compatibility contracts.
 - [`decisions/README.md`](decisions/README.md) — compact architectural decisions that must not be repeatedly rediscovered.
 
+### Reference inventories
+
+- [`reference/FILE_MANIFEST.md`](reference/FILE_MANIFEST.md) — loader roots, realm classification, known loaded trees, engine-discovered trees, and remaining enumeration gaps.
+- [`reference/PUBLIC_SURFACES.md`](reference/PUBLIC_SURFACES.md) — globals, hooks, network channels, convars, commands, persistence, trust boundaries, and duplicate registration hazards.
+
 ## Dependency-ordered research queue
 
 1. complete loaded-file and realm manifest;
-2. global symbol and public API registry;
-3. hooks, network messages, console variables, and commands;
+2. complete global symbol and public API registry;
+3. complete hooks, network messages, console variables, and commands inventory;
 4. round lifecycle and mode catalog;
 5. organism, fake-ragdoll, movement, and player-class systems;
 6. weapons, physical bullets, armor, ammunition, and explosives;
