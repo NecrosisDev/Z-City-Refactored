@@ -6,7 +6,7 @@
 **Runtime source baseline:** `429ec928203cec963176dfb6afd086dcdd01c181`  
 **Reviewed:** 2026-07-12
 
-This inventory tracks refactor-sensitive globals, hooks, network channels, convars, commands, persistence and trust boundaries. Absence is not evidence that a surface does not exist.
+This inventory tracks refactor-sensitive globals, hooks, network channels, convars, commands, persistence and trust boundaries. Absence is not evidence that a surface does not exist. Exact packet schemas are canonical in [`PACKET_MATRIX.md`](PACKET_MATRIX.md); function dispatch is canonical in [`MODE_FUNCTION_MATRIX.md`](MODE_FUNCTION_MATRIX.md).
 
 ## Core globals and registries
 
@@ -45,9 +45,11 @@ This inventory tracks refactor-sensitive globals, hooks, network channels, conva
 | `RoundStateChange` | Homicide reset | waits for stale state `2`; emitter unresolved |
 | `ZB_RoundStart` | CO-OP reset | core verified emitter is `ZB_StartRound`, so listener likely dead |
 | `PostCleanupMap` | airstrike/Fear/CO-OP systems | global cleanup hooks; inactive-mode effects require gating audit |
+| `RoundEnd` | Defense support cleanup | verified core emits `ZB_EndRound`; support-team cleanup compatibility unresolved |
 | dynamic `Think/ScareThatGuy<UserID>` | Fear event | per-player hook; cleanup/UserID reuse risk |
 | dynamic `PlayerUse/dooruse<EntIndex>` | Fear environment | global hook names; no-door/cleanup risk |
 | `Boxes Think` | Event/Superfighters | emitted from multiple timers/paths rather than conventional hook registration |
+| `SetupOutlines` / `radialOptions` | Defense client | direct outline and commander-support integrations remain loaded independent of mode-table dispatch |
 
 ## Core round/admin channels
 
@@ -73,7 +75,10 @@ This inventory tracks refactor-sensitive globals, hooks, network channels, conva
 |---|---|---|
 | `tdm_start` | S -> C | base TDM writes nothing; client reads string; CStrike writes expected string |
 | `tdm_buyitem` | C -> S | table `{category,item[,attachment]}`; no alive/rate/size/team/attachment-allowlist validation |
+| `CS_Intermission` | S -> C | bool team + int6 rounds; nested Derma receiver paired |
+| `CS_Killfeed` | S -> C | two team bools + killer/victim strings; paired |
 | `CS_Roundover` | S -> C | winner written bool despite numeric team identity |
+| `bomb_enter` | C -> S | code string; no mode/phase/ownership/distance/LOS/rate/format validation |
 | `dm_start` | S -> C | vector zone center + float radius |
 | `HMCD_RoundStart` | S -> C | variable role/type packet; traitor count can exceed roster entries and desynchronize reads |
 | `HMCD(StartPlayersRoleSelection)` | S -> C plus C -> S acknowledgement | role string outbound, no-payload acknowledgement; sender membership checked; path hard-disabled by `ShouldStartRoleRound` |
@@ -93,10 +98,24 @@ Homicide endpoint evidence is split across `sv_homicide.lua` blob `af101a8e73b17
 |---|---|---|
 | `hl2dm_roundend` | S -> C | server writes none; client reads int3 |
 | `npc_defense_newwave` | S -> C | float deadline + int4 wave; traced client reads only float |
-| `RequestSupport` | C -> S | string command; server endpoint/authorization/cost/rate unresolved |
+| Defense vote family | mixed | float deadline, int4 choices and unversioned result/update tables; sender rate/phase checks verified |
+| `RequestSupport` | C -> S | catalogued string; Commander/mode/incapacitation, two-second sender and global 290-second cooldown checks |
+| `defense_commander_menu` | bidirectional | no-payload request; table reply; role/alive and request/send rate limits |
+| `defense_commander_purchase` | C -> S | table up to 20 entries and 8192 raw length; catalog/quantity/points validation with remaining type/lower-bound concerns |
+| `defense_commander_notification` | S -> C | string + int16 point delta |
+| `defense_highlight_last_npcs`, `defense_commander_points`, `defense_player_role_assigned` | S -> C | final sender/reader line pairing incomplete |
 | `criresp_custom` | C -> S | uint8 primary, bodygroup string, uint4 count, uint8 gear IDs; partial bounds, any phase/client, no rate/bodygroup model validation |
 | `cri_roundend` | S -> C | uint4 winner + four uint8 statistics; matched in traced endpoints |
-| `ZB_RequestAirStrike` | C -> S | no payload; server uses sender eye trace; leader/strike/cooldown checks, entity/sky validity incomplete |
+| `ZB_RequestAirStrike` | C -> S | no payload; server uses sender eye trace; leader/strike/cooldown checks, active-mode/alive/state validity incomplete |
+
+## Defense function/public-service surface
+
+- Core mode functions publish voting, preparation, wave state, spawn fallback and timer services as dynamic hooks.
+- `sv_defense_waves.lua` publishes nav/visibility search, spawn queue, NPC targeting, wave progression and `OnNPCKilled`.
+- `sv_defense_roles.lua` publishes role assignment, commander economy, wave rewards, spawning and equipment.
+- `sv_defense_support.lua` keeps placement/delivery helpers local but exposes direct network receivers and a generic `RoundEnd` cleanup hook.
+- The file globally wraps `SpawnZBaseNPC`, affecting callers beyond Defense unless compatibility is proven.
+- Large waves combine one timer per NPC, repeated nav enumeration, tracked-table scans and world scans without an explicit performance budget.
 
 ## Pathowogen surfaces
 
@@ -157,8 +176,7 @@ Other Pathowogen surfaces:
 
 ## Next trace
 
-1. Resolve Defense auxiliary wave/support/highlight files and exact packet schemas.
-2. Resolve Counter-Strike objective entities and client objective/intermission readers.
-3. Resolve remaining Fear endpoints and Pathowogen derma/end-report consumers.
-4. Continue exact line enumeration for every mode function and packet operation.
-5. Trace `COMMANDS`, spawn override, map-point fallback, round-hook emitters and inactive-mode direct hooks.
+1. Close Defense highlight/commander point/role one-sided endpoints and direct-hook cleanup names.
+2. Trace remaining core one-sided channels (`FadeScreen`, `updtime`, spectator) and legacy admin consumers.
+3. Trace `COMMANDS`, spawn override, map-point fallback and round-hook emitters.
+4. Continue into organism, fake-ragdoll, movement and player-class ownership using the completed mode matrices.
