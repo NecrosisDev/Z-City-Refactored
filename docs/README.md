@@ -38,6 +38,7 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 - [`SYSTEM_CATALOG.md`](SYSTEM_CATALOG.md) — runtime systems, ownership, entry points, dependencies, public surfaces, integration state, and validation.
 - [`BEHAVIOR_CATALOG.md`](BEHAVIOR_CATALOG.md) — externally observable runtime and gameplay behaviors.
 - [`TYPE_CATALOG.md`](TYPE_CATALOG.md) — shared tables, registries, identifiers, payloads, schemas, and compatibility contracts.
+- [`modes/MODE_CATALOG.md`](modes/MODE_CATALOG.md) — registered mode IDs, source files, submodes, lifecycle contracts, dependencies, verified defects, and validation.
 - [`decisions/README.md`](decisions/README.md) — compact architectural decisions that must not be repeatedly rediscovered.
 
 ### Reference inventories
