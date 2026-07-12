@@ -8,7 +8,7 @@
 - **Title:** Establish repository-local agent memory, knowledge, and regression contract
 - **Branch:** `chore/agent-knowledge-contract`
 - **Pull request:** `#2` (draft)
-- **Status:** `validation`
+- **Status:** `ready for authorized merge`
 - **Knowledge state:** `Verified` for repository changes; no gameplay claims added
 
 ## Desired outcome
@@ -39,6 +39,7 @@ Ensure every future agent begins each session with the same cumulative operating
 - Defined continuation behavior and full-system-integration completion criteria.
 - Updated `docs/INDEX.md` to require agents to read `AGENTS.md` first.
 - Retained compact system, behavior, type, decision, work-package, and pull-request mechanisms as supporting records.
+- Aligned PR `#2` and the pull-request checklist with the consolidated contract.
 
 ## Validation
 
@@ -48,20 +49,25 @@ Ensure every future agent begins each session with the same cumulative operating
 | Every session has an explicit startup sequence | Pass | `AGENTS.md` and `docs/INDEX.md` |
 | Conversation history is not required | Pass | Contract requires repository-complete handoff |
 | Contract drift has a defined failure response | Pass | `AGENTS.md` contract-integrity section |
+| Branch divergence | Pass | 14 commits ahead of `main`, 0 behind |
+| Pull request mergeability | Pass | PR `#2` reports mergeable |
+| Changed-file scope | Pass | Exactly eight Markdown files |
 | Main branch modified | No | All changes remain on `chore/agent-knowledge-contract` |
-| Runtime behavior modified | No | Markdown-only branch |
+| Runtime behavior modified | No | No Lua, assets, hooks, net messages, convars, configuration, or load-order files changed |
 | Process/tooling bloat introduced | No | No service, hook, generator, CI, runtime dependency, or duplicate registry |
 | Gameplay claims introduced | No | Catalogs remain evidence-gated templates |
 
 ## Risks and blockers
 
-- The contract cannot govern agents operating from `main` until PR `#2` is reviewed and merged by an authorized user.
-- Repository rules are advisory unless the agent follows startup instructions; later CI enforcement should be added only after a demonstrated compliance failure justifies it.
-- The first real tracing package must test whether catalog templates provide sufficient detail without duplication.
+- **Blocking gate:** PR `#2` cannot be merged until the user explicitly authorizes merging to `main`, as required by `AGENTS.md`.
+- The contract cannot govern agents operating from `main` until that merge occurs.
+- Repository rules remain advisory unless agents follow startup instructions; CI enforcement must not be added without a demonstrated compliance failure.
+- The first real tracing package must test whether the catalog templates provide sufficient detail without duplication.
 
 ## Exact continuation action
 
-1. Finish aligning the pull-request checklist and PR `#2` description with the consolidated contract.
-2. Re-compare the branch against `main` and verify all changes are Markdown-only and internally consistent.
-3. Leave PR `#2` as a draft for user review; do not merge.
-4. After authorized merge, branch from updated `main` for `WP-TRACE-001` and trace executable Lua bootstrap/load order, populating the first verified system entries with exact paths, realms, include order, hooks, dependencies, failure modes, and reproducible startup validation.
+1. Obtain explicit user authorization to merge PR `#2` into `main`.
+2. Merge only after that authorization; do not reinterpret a generic continuation instruction as merge approval.
+3. Create a focused branch from the updated `main` for `WP-TRACE-001`.
+4. Trace executable Lua bootstrap/load order and populate the first verified `SYS-*` entries with exact paths, realms, include order, hooks, dependencies, public surfaces, data ownership, failure modes, and reproducible startup validation.
+5. Leave another repository-complete handoff before stopping.
