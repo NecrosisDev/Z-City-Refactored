@@ -76,9 +76,16 @@ This inventory tracks refactor-sensitive globals, hooks, network channels, conva
 | `CS_Roundover` | S -> C | winner written bool despite numeric team identity |
 | `dm_start` | S -> C | vector zone center + float radius |
 | `HMCD_RoundStart` | S -> C | variable role/type packet; traitor count can exceed roster entries and desynchronize reads |
-| `HMCD_UpdateTraitorAssistants` | S -> C | uint8 count then color/name/SteamID entries; client endpoint unresolved |
+| `HMCD(StartPlayersRoleSelection)` | S -> C plus C -> S acknowledgement | role string outbound, no-payload acknowledgement; sender membership checked; path hard-disabled by `ShouldStartRoleRound` |
+| `HMCD(EndPlayersRoleSelection)` | S -> C | no payload; client removes role-selection UI; currently unreachable upstream |
+| `HMCD(SetSubRole)` | expected S -> C | string reader exists, but no writer was located in loaded Homicide source; incomplete contract |
+| `HMCDPoliceRole` | registered only | no writer or receiver located; dormant registration rather than a verified protocol |
+| `HMCD_UpdateTraitorAssistants` | S -> C | uint8 count then color/name/SteamID entries; client receiver updates `MODE.TraitorsLocal` |
+| `HMCD_TraitorDeathState` | S -> C | appearance name + alive bool; client receiver caches assistant state by appearance name |
 | `hmcd_roundend` | S -> C | uint count+entities for traitors, then gunners; duplicate registration and entity validity assumptions |
-| `check_lightness` | S <-> C (Fear) | server sends entity; clients return vector | bounded vector only; client-authoritative, global target, no target ID/visibility/rate authority |
+| `check_lightness` | S <-> C (Fear) | server sends entity; clients return vector; bounded vector only, client-authoritative, global target, no target ID/visibility/rate authority |
+
+Homicide endpoint evidence is split across `sv_homicide.lua` blob `af101a8e73b170ca67e5a8c951ec83dd0655e0c8`, `cl_homicide.lua` blob `6e15a2b3eae790d1e9525c78a5344f3efcfd1de3`, and `cl_hud.lua` blob `87356c1f96336ca160841293500b374dc668d089`.
 
 ## Team/PvE packet highlights
 
@@ -86,20 +93,20 @@ This inventory tracks refactor-sensitive globals, hooks, network channels, conva
 |---|---|---|
 | `hl2dm_roundend` | S -> C | server writes none; client reads int3 |
 | `npc_defense_newwave` | S -> C | float deadline + int4 wave; traced client reads only float |
-| `RequestSupport` | C -> S | string command | server endpoint/authorization/cost/rate unresolved |
-| `criresp_custom` | C -> S | uint8 primary, bodygroup string, uint4 count, uint8 gear IDs | partial bounds; any phase/client, no rate/bodygroup model validation |
-| `cri_roundend` | S -> C | uint4 winner + four uint8 statistics | matched in traced endpoints |
-| `ZB_RequestAirStrike` | C -> S | no payload; server uses sender eye trace | leader/strike/cooldown checks; entity/sky validity incomplete |
+| `RequestSupport` | C -> S | string command; server endpoint/authorization/cost/rate unresolved |
+| `criresp_custom` | C -> S | uint8 primary, bodygroup string, uint4 count, uint8 gear IDs; partial bounds, any phase/client, no rate/bodygroup model validation |
+| `cri_roundend` | S -> C | uint4 winner + four uint8 statistics; matched in traced endpoints |
+| `ZB_RequestAirStrike` | C -> S | no payload; server uses sender eye trace; leader/strike/cooldown checks, entity/sky validity incomplete |
 
 ## Pathowogen surfaces
 
 | Channel | Direction | Schema / notes |
 |---|---|---|
 | `zb_furbriefing`, `zb_furfurbriefing`, `zb_furtraitorbriefing` | S -> C | no payload; create role-specific panels |
-| `zb_commandertransmit`, `zb_contractortransmit` | S -> C | string message | server loops can resend to full recipient list repeatedly |
-| `zb_extractionheli` | S -> C | entity helicopter | client stores `zb.uwucopter`; validity/state lifecycle incomplete |
-| `zb_extractionpoint`, `zb_traitorextractionpoint` | S -> C | vector point | client global extraction state; repeated sends possible |
-| `ZB_Pathowogen_RoundEnd` | S -> C | uint3 outcome + Lua table keyed by players | unbounded/versionless complex table; entity disconnect semantics unresolved |
+| `zb_commandertransmit`, `zb_contractortransmit` | S -> C | string message; server loops can resend to full recipient list repeatedly |
+| `zb_extractionheli` | S -> C | entity helicopter; client stores `zb.uwucopter`, validity/state lifecycle incomplete |
+| `zb_extractionpoint`, `zb_traitorextractionpoint` | S -> C | vector point; client global extraction state, repeated sends possible |
+| `ZB_Pathowogen_RoundEnd` | S -> C | uint3 outcome + Lua table keyed by players; unbounded/versionless complex table, entity disconnect semantics unresolved |
 
 Other Pathowogen surfaces:
 - point registries `UWU_GlideHeli`, `UWU_DeltaSquad`, `SCRAPPERS_BIGBOX`, `SCRAPPERS_SMALLBOX`, `SCRAPPERS_VEHICLE`;
@@ -150,8 +157,8 @@ Other Pathowogen surfaces:
 
 ## Next trace
 
-1. Produce the full cross-mode packet matrix from all cataloged modes.
-2. Produce the mode-function classification/collision matrix.
-3. Resolve Defense auxiliary files, Homicide endpoints, Counter-Strike entities and legacy admin queue clients.
-4. Trace `COMMANDS`, spawn override, map-point fallback, round-hook emitters and inactive-mode direct hooks.
-5. Continue public-surface inventory during organism/fake-ragdoll/movement research.
+1. Resolve Defense auxiliary wave/support/highlight files and exact packet schemas.
+2. Resolve Counter-Strike objective entities and client objective/intermission readers.
+3. Resolve remaining Fear endpoints and Pathowogen derma/end-report consumers.
+4. Continue exact line enumeration for every mode function and packet operation.
+5. Trace `COMMANDS`, spawn override, map-point fallback, round-hook emitters and inactive-mode direct hooks.
