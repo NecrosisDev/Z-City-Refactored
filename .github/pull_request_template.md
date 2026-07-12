@@ -1,26 +1,30 @@
-## What changed
+## What changed and why
 
-Describe the implementation change.
+Describe the verified problem or approved requirement, the implementation change, and why this approach was chosen.
 
-## Why
-
-Describe the verified problem, requirement, or design decision that required it.
-
-## Scope
+## Scope and evidence
 
 - Work package: `WP-...`
+- Branch: `...`
 - Related systems/behaviors/types: `SYS-...`, `BEH-...`, `TYPE-...`
+- Knowledge labels used: `Verified`, `Inferred`, `Legacy Claim`, `Planned`
+- Exact evidence: files, symbols, tests, runtime reproduction, issues, or decisions
 
-## Validation
+## Integration and validation
 
-List automated checks and reproducible manual checks, including results.
+Describe affected layers, callers, consumers, data/control flow, networking, persistence, permissions, UI, load order, compatibility, performance, automated checks, manual checks, expected results, and actual results.
 
 ## Regression and handoff checklist
 
-- [ ] Branch is focused and does not target unrelated cleanup.
+- [ ] I read `AGENTS.md`, `docs/INDEX.md`, and `docs/WORK_PACKAGE.md` before working.
+- [ ] This branch is focused, does not commit to `main`, and contains no unrelated cleanup.
 - [ ] Commit messages explain both what changed and why.
-- [ ] Bug fixes include a regression check where practical.
-- [ ] Client/server trust boundaries and network payload changes were reviewed.
-- [ ] Relevant system, behavior, or type catalogs were updated—or marked not applicable with a reason.
-- [ ] `docs/WORK_PACKAGE.md` records current status, risks, and the next concrete action.
-- [ ] Unverified assumptions are explicitly labeled.
+- [ ] Current behavior is evidence-backed; assumptions and plans are explicitly labeled.
+- [ ] Bug fixes and changed contracts include regression checks where practical.
+- [ ] Adjacent callers, consumers, hooks, shared state, network payloads, trust boundaries, load order, persistence, UI, permissions, compatibility, and performance were reviewed as applicable.
+- [ ] Relevant catalogs and decision records were updated atomically, or marked not applicable with a reason.
+- [ ] Documentation names exact files, symbols, dependencies, invariants, edge cases, implementation order, acceptance criteria, and validation steps needed by the next agent.
+- [ ] `docs/WORK_PACKAGE.md` records status, evidence, risks, blockers, dependencies, validation, and the exact continuation action.
+- [ ] No duplicate process, abstraction, registry, report, generator, service, CI, hook, or runtime dependency was added without a demonstrated need.
+- [ ] Local completion is not represented as full integration; remaining work is dependency-ordered and explicitly handed off.
+- [ ] The change was not merged to `main` without explicit user authorization.
