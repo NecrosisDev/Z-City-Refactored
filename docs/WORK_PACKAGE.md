@@ -31,6 +31,8 @@
 - The local archive now has an immutable integration baseline covering artifact identity, file counts, deployment roots, Trauma/Z-City identity drift, loader differences, subsystem families, persistence migration and validation gates.
 - The local archive bot/NPC system is documented across player-bot brain ownership, due-time scheduling, behavior bands, command-rate control, muzzle steering, perception, navigation, botfill, configuration/debugging, VJ compatibility, stock NPC extensions and zombie extensions.
 - The archive's player bots are verified as code-present but shipping-disabled by `lua/autorun/000_trauma_disable_bots.lua`.
+- The local archive now has a complete, reproducible 1,040-row file manifest with normalized candidate paths, byte sizes, SHA-256 values and Git blob identities; canonical CSV SHA-256 is `28f6eca648b80d6eca1419ce3e30fc60d2971ab743457d23aeee9d5a261cd4b0`.
+- Thirteen representative core paths have exact repository/archive blob comparisons: two are identical and eleven have diverged, proving that integration must remain file- and feature-scoped.
 
 ## Verified cross-system findings
 
@@ -56,8 +58,8 @@
 
 ## Still-open inventory and evidence gaps
 
-- Complete repository-versus-archive recursive path/hash comparison does not exist.
-- Repository-only, archive-only, renamed, modified, bundled dependency and excluded paths are not yet machine classified.
+- The local archive manifest is complete and reproducible, but a recursive repository path/hash manifest is unavailable through the current connector.
+- Repository-only, archive-only, renamed, modified, bundled dependency and excluded paths therefore cannot yet be classified repository-wide.
 - The `COMMANDS` registry, all spawn override surfaces, point-system APIs and complete objective/editor consumers remain unresolved on the repository baseline.
 - Complete weapon publisher/consumer and lifecycle enumeration remains incomplete across both sources.
 - Inventory/equipment/appearance/clothing restoration contracts remain incomplete.
@@ -67,13 +69,13 @@
 
 ## Current bounded trace
 
-Build the integration comparison needed before runtime import while extending catalogs with local bot/NPC evidence.
+Complete the repository side of the integration comparison needed before runtime import while continuing source-qualified subsystem documentation.
 
 ### Required outputs
 
-1. Produce a complete local archive manifest with normalized destination paths and content hashes.
+1. Preserve and verify the complete local archive manifest and its deterministic generator.
 2. Obtain or construct a complete repository `main` path/hash manifest.
-3. Classify every path as identical, modified, archive-only, repository-only, rename, generated, bundled dependency or excluded.
+3. Join both manifests and classify every path as identical, modified, archive-only, repository-only, rename, generated, bundled dependency or excluded.
 4. Map each changed path to subsystem owner, realm, public surfaces, persistence and validation.
 5. Update `FILE_MANIFEST`, `PUBLIC_SURFACES`, system/behavior/type catalogs and packet coverage for local bot/NPC surfaces.
 6. Continue weapon lifecycle and capability enumeration without mixing repository and archive evidence.
@@ -94,7 +96,7 @@ Build the integration comparison needed before runtime import while extending ca
 
 ## Dependency-ordered continuation
 
-1. Repository-versus-archive path/hash delta and import classification.
+1. Obtain the recursive repository manifest, then complete the repository-versus-archive path/hash delta and import classification.
 2. Weapon lifecycle, bullets, ammunition, projectiles, armor, explosives, damage and presentation.
 3. Inventory/equipment/appearance/clothing ownership and restoration.
 4. Complete bot/NPC public surfaces, types, packets and runtime evidence.
@@ -104,4 +106,4 @@ Build the integration comparison needed before runtime import while extending ca
 
 ## Exact next action
 
-Continue on `docs/architecture-baseline`: generate the normalized local archive manifest and pursue a complete repository tree manifest; create the path/hash delta and subsystem classification; update integration, file-manifest, public-surface and catalog documents with source-qualified evidence. In parallel, continue exact weapon lifecycle enumeration and preserve bounded negative claims where repository recursion remains unavailable. Do not modify runtime Lua, create another branch, or merge PR `#1` without explicit authorization.
+Continue on `docs/architecture-baseline`: obtain a recursive repository tree/archive for baseline commit `429ec928203cec963176dfb6afd086dcdd01c181`, generate its path/hash manifest, join it against the pinned 1,040-row local manifest, and produce complete path and subsystem dispositions. Until recursive repository evidence is available, continue exact-path weapon/inventory/UI/security traces and preserve bounded negative claims. Do not modify runtime Lua, create another branch, or merge PR `#1` without explicit authorization.
