@@ -8,23 +8,24 @@ Every agent must read these files in order:
 
 1. [`../AGENTS.md`](../AGENTS.md) — cumulative operating contract.
 2. [`WORK_PACKAGE.md`](WORK_PACKAGE.md) — current scope, evidence, validation, risks, and exact continuation action.
-3. The architecture documents, catalogs, and reference matrices linked by the active work package.
+3. The architecture documents, catalogs, integration records, and reference matrices linked by the active work package.
 
 ## Active research state
 
 - **Branch:** `docs/architecture-baseline`
 - **Review surface:** PR `#1`
-- **Phase:** code-grounded project research and documentation baseline
+- **Phase:** code-grounded repository research plus local-archive integration documentation
 - **Rule:** continue all research work packages on this branch; do not create per-package branches.
+- **Runtime rule:** documentation work does not authorize merging the local archive or changing runtime Lua.
 
 ## Knowledge authority
 
 1. Reproducible tests and runtime evidence.
-2. Executable code.
-3. Evidence-linked architecture documents, catalogs, and decision records.
+2. Executable code from an explicitly identified source artifact.
+3. Evidence-linked architecture documents, catalogs, integration records, and decision records.
 4. Comments, historical notes, and inherited documentation.
 
-Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`. When documentation and implementation disagree, implementation remains authoritative until runtime evidence proves otherwise.
+Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`. Archive evidence must identify its artifact hash and must not be silently generalized to repository `main`. When documentation and implementation disagree, the identified implementation remains authoritative until runtime evidence proves otherwise.
 
 ## Current documents
 
@@ -36,7 +37,14 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 - [`architecture/FAKE_RAGDOLL_SYSTEM.md`](architecture/FAKE_RAGDOLL_SYSTEM.md) — custom ragdoll creation, ownership, networking, active physics control, death/get-up, vehicles, camera/render, integration risks, and validation.
 - [`architecture/MOVEMENT_SYSTEM.md`](architecture/MOVEMENT_SYSTEM.md) — prediction, speed/inertia/jump calculation, organism/class/weapon modifiers, animation, footsteps, fake transitions, and validation.
 - [`architecture/PLAYER_CLASS_SYSTEM.md`](architecture/PLAYER_CLASS_SYSTEM.md) — class registry, lifecycle, transport, concrete class capabilities, organism/movement/fake integration, security defects, and migration boundaries.
-- [`architecture/CHARACTER_RUNTIME_INTEGRATION.md`](architecture/CHARACTER_RUNTIME_INTEGRATION.md) — combined authority graph and lifecycle for organism, fake-ragdoll, movement, and player classes.
+- [`architecture/CHARACTER_RUNTIME_INTEGRATION.md`](architecture/CHARACTER_RUNTIME_INTEGRATION.md) — combined authority graph and lifecycle for organism, fake-ragdoll, movement, player classes, and weapon-facing contracts.
+- [`architecture/WEAPON_AND_BALLISTICS_SYSTEM.md`](architecture/WEAPON_AND_BALLISTICS_SYSTEM.md) — firearm base, ammunition, bullet, reload, attachment, projectile, explosive, damage, and presentation ownership.
+- [`architecture/WEAPON_COMBAT_INTERFACES.md`](architecture/WEAPON_COMBAT_INTERFACES.md) — current implicit weapon capability contracts consumed by fake-body and character runtime.
+- [`architecture/BOT_AND_NPC_SYSTEM.md`](architecture/BOT_AND_NPC_SYSTEM.md) — local archive player-bot scheduler/arbiter/control, botfill, navigation, VJ compatibility, stock NPC and zombie extensions, shipping disablement, risks, and validation.
+
+### Integration records
+
+- [`integration/LOCAL_ARCHIVE_BASELINE.md`](integration/LOCAL_ARCHIVE_BASELINE.md) — immutable identity, structure, loader drift, project rename, subsystem families, bot shipping state, integration risks, and required repository-versus-archive delta for uploaded `Trauma.zip`.
 
 ### Living catalogs
 
@@ -57,17 +65,19 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 
 ## Dependency-ordered research queue
 
-1. weapons, physical bullets, ammunition, armor, explosives, and ragdoll-combat interfaces;
-2. inventory, equipment, appearance, and clothing ownership across round/class/fake transitions;
-3. NPC and bot architecture, including organism, faction, bullseye, fake-body, and mode consumers;
-4. UI, HUD, camera, spectator, and screen effects;
-5. persistence, administration, security, and external integrations;
-6. runtime load-order/hook/packet/performance instrumentation;
-7. cross-system regression matrix, verified defect catalog, and implementation-ready remediation packages.
+1. Generate the complete repository-versus-local-archive path/hash delta and subsystem import classification.
+2. Complete weapon lifecycle, physical bullet, ammunition, projectile, armor, explosive, damage and presentation traces on both identified sources.
+3. Trace inventory, equipment, appearance and clothing ownership across round/class/fake/death transitions.
+4. Extend bot/NPC documentation into complete packet/public-surface/type/catalog coverage and enabled-runtime evidence.
+5. Trace UI, HUD, camera, spectator and screen effects.
+6. Trace persistence, administration, security and external integrations.
+7. Add runtime load-order/hook/packet/performance instrumentation.
+8. Produce the cross-system regression matrix, verified defect catalog and implementation-ready import/remediation packages.
 
 ## Maintenance rules
 
 - Keep this file compact; detailed evidence belongs in linked documents, code references, commits, PR discussion, and validation records.
 - Update documents atomically when new evidence changes a claim.
 - Do not create duplicate indexes or empty placeholder documents.
+- Identify whether evidence comes from repository `main`, the documentation branch, or a hashed local artifact.
 - Each completed trace must leave exact paths, symbols, dependencies, failure modes, validation steps, evidence gaps, and the next dependency-ordered action.
