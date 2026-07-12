@@ -6,20 +6,20 @@
 **Runtime source baseline:** `429ec928203cec963176dfb6afd086dcdd01c181`  
 **Reviewed:** 2026-07-12
 
-This inventory tracks refactor-sensitive globals, hooks, network channels, convars, commands, persistence and trust boundaries. Absence is not evidence that a surface does not exist. Exact packet schemas are canonical in [`PACKET_MATRIX.md`](PACKET_MATRIX.md); function dispatch is canonical in [`MODE_FUNCTION_MATRIX.md`](MODE_FUNCTION_MATRIX.md).
+This inventory tracks refactor-sensitive globals, hooks, network channels, convars, commands, persistence and trust boundaries. Exact packet schemas are canonical in [`PACKET_MATRIX.md`](PACKET_MATRIX.md); function dispatch is canonical in [`MODE_FUNCTION_MATRIX.md`](MODE_FUNCTION_MATRIX.md).
 
 ## Core globals and registries
 
 | Surface | Owner | Realm | Contract/risk |
 |---|---|---|---|
-| `hg` / `hg.loaded` | global loader | local server/client copies | global addon namespace; loaded false during bootstrap, true before `HomigradRun`; ixhl2rp early return leaves false |
-| `zb` | gamemode/bootstrap libraries | local server/client copies | mode registry, round state, points, teams, admin UI and many subsystem globals |
-| `zb.modes` | mode loader | server/client | mode name -> table; server/client keys must match network-visible IDs |
-| `zb.modesHooks` | mode loader | server/client | mode -> function key -> callback; reset on loader execution |
-| `MODE` | loader/mode files | temporary global | assembly scratch table; every function becomes a hook candidate |
-| `CurrentRound()` / `NextRound()` | round system/client | realm-local globals | resolves base/submode and future mode; broad consumer surface |
-| `COMMANDS` | unresolved command framework | primarily server | admin command entries; dispatcher/normalization/collision behavior untraced |
-| mode/client globals | individual modes | mixed | repeated `StartTime`, `dmmusic`, `hmcdEndMenu`, winner flags, zone/extraction state and stations collide across modes/hotload |
+| `hg` / `hg.loaded` | global loader | server/client | global addon namespace and bootstrap state |
+| `zb` | gamemode/bootstrap libraries | server/client | mode registry, round state, points, teams, admin UI and subsystem globals |
+| `zb.modes` | mode loader | server/client | mode name -> table; realm registries must agree |
+| `zb.modesHooks` | mode loader | server/client | mode -> function key -> callback |
+| `MODE` | loader/mode files | temporary global | every function-valued member becomes a hook candidate |
+| `CurrentRound()` / `NextRound()` | round system/client | realm-local | broad mode-state consumer surface |
+| `COMMANDS` | unresolved command framework | primarily server | owner/dispatcher/collision behavior still untraced |
+| mode/client globals | individual modes | mixed | repeated timing, menu, winner, zone, extraction and audio globals collide across modes/hotload |
 
 ## Core hook contract
 
@@ -27,156 +27,121 @@ This inventory tracks refactor-sensitive globals, hooks, network channels, conva
 
 | Hook | Emitter | Contract |
 |---|---|---|
-| `HomigradRun` | global loader | no args, after main addon load |
+| `HomigradRun` | global loader | no args after main addon load |
 | `ZB_PreRoundStart` | round system | state `3 -> 0` preparation |
-| `TTTPrepareRound` | round system | compatibility emission at same transition |
+| `TTTPrepareRound` | round system | compatibility emission at preparation |
 | `ZB_StartRound` | round system | after mode start/next selection |
 | `ZB_EndRound` | round system | after mode end |
-| `RoundInfoCalled` | client RoundInfo receiver | mode name before assigning client state |
+| `RoundInfoCalled` | client RoundInfo receiver | mode name before client state assignment |
 | `ZB_TraitorWinOrNot` | Homicide | traitor entity + winner identifier |
-| dynamic mode function names | mode loader | invokes selected mode function as `func(modeTable, ...)`; dot-defined methods suffer argument shift |
+| dynamic mode function names | mode loader | invokes `func(modeTable, ...)`; dot-defined methods shift arguments |
 
 ### High-impact registrations
 
 | Hook | Identifier/owner | Risk |
 |---|---|---|
 | `Think` | `zb-think` | core lifecycle, once/sec |
-| `PlayerInitialSpawn` | round sync + admin sync | multiple handlers; one duplicate identifier in round system |
+| `PlayerInitialSpawn` | round/admin sync | multiple handlers and duplicate identifier |
 | `RoundStateChange` | Homicide reset | waits for stale state `2`; emitter unresolved |
-| `ZB_RoundStart` | CO-OP reset | core verified emitter is `ZB_StartRound`, so listener likely dead |
-| `PostCleanupMap` | airstrike/Fear/CO-OP systems | global cleanup hooks; inactive-mode effects require gating audit |
-| `RoundEnd` | Defense support cleanup | verified core emits `ZB_EndRound`; support-team cleanup compatibility unresolved |
-| dynamic `Think/ScareThatGuy<UserID>` | Fear event | per-player hook; cleanup/UserID reuse risk |
-| dynamic `PlayerUse/dooruse<EntIndex>` | Fear environment | global hook names; no-door/cleanup risk |
-| `Boxes Think` | Event/Superfighters | emitted from multiple timers/paths rather than conventional hook registration |
-| `SetupOutlines` / `radialOptions` | Defense client | direct outline and commander-support integrations remain loaded independent of mode-table dispatch |
+| `ZB_RoundStart` | CO-OP reset | verified core emitter is `ZB_StartRound` |
+| `PostCleanupMap` | airstrike/Fear/CO-OP | inactive-mode effects require gating audit |
+| `RoundEnd` | Defense support cleanup | verified core emitter is `ZB_EndRound`; support-team cleanup likely dead |
+| dynamic Fear hooks | Fear events/environment | cleanup and identifier reuse risks |
+| `SetupOutlines` / `radialOptions` | Defense client | direct integrations load outside mode-table dispatch |
 
 ## Core round/admin channels
 
 | Channel | Direction | Ordered schema | Validation/status |
 |---|---|---|---|
-| `RoundInfo` | S -> C | string mode, int4 state | matched; server authoritative |
+| `RoundInfo` | S -> C | string mode, int4 state | paired; server authoritative |
 | `FadeScreen` | S -> C | none | client endpoint not fully traced |
-| `updtime` | S -> C | float round time, float start, float begin | sender unresolved |
-| `ZB_SendModesInfo` | S -> admin C | table mode records | server recipient-gated; table schema implicit |
-| `ZB_SendRoundList` | S -> admin C | table list, string next, string force | table schema implicit |
+| `updtime` | S -> C | three floats | sender unresolved |
+| `ZB_SendModesInfo` / `ZB_SendRoundList` | S -> admin C | Lua tables plus strings | recipient-gated; implicit schemas |
 | `ZB_RequestRoundList` | admin C -> S | none | admin checked |
-| `ZB_UpdateRoundList` | admin C -> S | table list, bool forceUpdate | admin checked; no shape/size/ID bounds; bool read but unused |
-| `AdminSetGameMode` | admin C -> S | string command, string mode, bool queue | duplicate receivers; later eligibility condition unreachable after admin guard |
-| `AdminEndRound` | admin C -> S | none | admin checked |
-| `AdminSetGameQueue` | C -> S | table queue | duplicate/legacy; admin checked but unvalidated |
-| `SendGameQueue` / `RequestGameQueue` / queue notifications | mixed | tables/strings/none | overlapping legacy protocol; active clients unresolved |
+| `ZB_UpdateRoundList` | admin C -> S | table list, bool | weak table validation; bool unused |
+| `AdminSetGameMode` / `AdminSetGameQueue` | admin C -> S | strings/bool or Lua table | duplicate/legacy receivers and weak validation |
+| legacy queue family | mixed | tables/strings/none | active consumers unresolved |
 
-**Duplicate hazard:** `sv_roundsystem.lua` repeats multiple network registrations, receivers, a `PlayerInitialSpawn` hook identifier and `zb.SyncQueueToAdmins`; later name-keyed definitions are expected effective but need runtime proof.
+Duplicate name-keyed network registrations and queue generations require runtime overwrite proof before consolidation.
 
 ## Competitive/Homicide packet highlights
 
 | Channel | Direction | Schema / defect |
 |---|---|---|
-| `tdm_start` | S -> C | base TDM writes nothing; client reads string; CStrike writes expected string |
-| `tdm_buyitem` | C -> S | table `{category,item[,attachment]}`; no alive/rate/size/team/attachment-allowlist validation |
-| `CS_Intermission` | S -> C | bool team + int6 rounds; nested Derma receiver paired |
-| `CS_Killfeed` | S -> C | two team bools + killer/victim strings; paired |
-| `CS_Roundover` | S -> C | winner written bool despite numeric team identity |
-| `bomb_enter` | C -> S | code string; no mode/phase/ownership/distance/LOS/rate/format validation |
-| `dm_start` | S -> C | vector zone center + float radius |
-| `HMCD_RoundStart` | S -> C | variable role/type packet; traitor count can exceed roster entries and desynchronize reads |
-| `HMCD(StartPlayersRoleSelection)` | S -> C plus C -> S acknowledgement | role string outbound, no-payload acknowledgement; sender membership checked; path hard-disabled by `ShouldStartRoleRound` |
-| `HMCD(EndPlayersRoleSelection)` | S -> C | no payload; client removes role-selection UI; currently unreachable upstream |
-| `HMCD(SetSubRole)` | expected S -> C | string reader exists, but no writer was located in loaded Homicide source; incomplete contract |
-| `HMCDPoliceRole` | registered only | no writer or receiver located; dormant registration rather than a verified protocol |
-| `HMCD_UpdateTraitorAssistants` | S -> C | uint8 count then color/name/SteamID entries; client receiver updates `MODE.TraitorsLocal` |
-| `HMCD_TraitorDeathState` | S -> C | appearance name + alive bool; client receiver caches assistant state by appearance name |
-| `hmcd_roundend` | S -> C | uint count+entities for traitors, then gunners; duplicate registration and entity validity assumptions |
-| `check_lightness` | S <-> C (Fear) | server sends entity; clients return vector; bounded vector only, client-authoritative, global target, no target ID/visibility/rate authority |
-
-Homicide endpoint evidence is split across `sv_homicide.lua` blob `af101a8e73b170ca67e5a8c951ec83dd0655e0c8`, `cl_homicide.lua` blob `6e15a2b3eae790d1e9525c78a5344f3efcfd1de3`, and `cl_hud.lua` blob `87356c1f96336ca160841293500b374dc668d089`.
+| `tdm_start` | S -> C | base writes nothing while client reads string |
+| `tdm_buyitem` | C -> S | weakly bounded purchase table |
+| `CS_Intermission` / `CS_Killfeed` | S -> C | paired nested Derma consumers |
+| `CS_Roundover` | S -> C | numeric winner written through bool |
+| `bomb_enter` | C -> S | no mode/phase/ownership/distance/LOS/rate/format validation |
+| `HMCD_RoundStart` | S -> C | conditional traitor roster can desynchronize stream |
+| role-selection family | mixed | structurally paired but hard-disabled; subrole reader-only; police registration-only |
+| assistant/death-state family | S -> C | paired count/name/state protocols |
+| `check_lightness` | both | client-authored vector through unauthenticated global request slot |
 
 ## Team/PvE packet highlights
 
 | Channel | Direction | Schema / defect |
 |---|---|---|
 | `hl2dm_roundend` | S -> C | server writes none; client reads int3 |
-| `npc_defense_newwave` | S -> C | float deadline + int4 wave; traced client reads only float |
-| Defense vote family | mixed | float deadline, int4 choices and unversioned result/update tables; sender rate/phase checks verified |
-| `RequestSupport` | C -> S | catalogued string; Commander/mode/incapacitation, two-second sender and global 290-second cooldown checks |
-| `defense_commander_menu` | bidirectional | no-payload request; table reply; role/alive and request/send rate limits |
-| `defense_commander_purchase` | C -> S | table up to 20 entries and 8192 raw length; catalog/quantity/points validation with remaining type/lower-bound concerns |
-| `defense_commander_notification` | S -> C | string + int16 point delta |
-| `defense_highlight_last_npcs`, `defense_commander_points`, `defense_player_role_assigned` | S -> C | final sender/reader line pairing incomplete |
-| `criresp_custom` | C -> S | uint8 primary, bodygroup string, uint4 count, uint8 gear IDs; partial bounds, any phase/client, no rate/bodygroup model validation |
-| `cri_roundend` | S -> C | uint4 winner + four uint8 statistics; matched in traced endpoints |
-| `ZB_RequestAirStrike` | C -> S | no payload; server uses sender eye trace; leader/strike/cooldown checks, active-mode/alive/state validity incomplete |
+| `npc_defense_newwave` | S -> C | float deadline + int4 wave; client reads only float |
+| Defense vote family | mixed | paired primitives plus unversioned result/update tables |
+| `RequestSupport` | C -> S | catalog string with Commander/mode/incapacitation and cooldown checks |
+| `defense_commander_menu` | bidirectional | empty request, table reply; role/alive/rate checks |
+| `defense_commander_purchase` | C -> S | bounded raw/table counts but implicit item schema and weak quantity typing |
+| `defense_commander_notification` | S -> C | string + int16 delta |
+| `defense_highlight_last_npcs` | S -> C | paired in `sv_defense_hooks.lua`; broadcasts remaining entity indices when 1–3 remain |
+| `defense_commander_points` | none | registration-only; actual state uses `NWInt("CommanderPoints")` |
+| `defense_player_role_assigned` | S -> C | two server writers, no client receiver; clients use `NWString("PlayerRole")` |
+| `defense_admin_command` | C -> S | reader-only admin command + Lua table; no sender, rate, size or active-mode guard |
+| `criresp_custom` | C -> S | partial bounds but no mode/phase/role/rate/model validation |
+| `ZB_RequestAirStrike` | C -> S | no payload; active-mode/alive/state checks incomplete |
 
 ## Defense function/public-service surface
 
-- Core mode functions publish voting, preparation, wave state, spawn fallback and timer services as dynamic hooks.
-- `sv_defense_waves.lua` publishes nav/visibility search, spawn queue, NPC targeting, wave progression and `OnNPCKilled`.
-- `sv_defense_roles.lua` publishes role assignment, commander economy, wave rewards, spawning and equipment.
-- `sv_defense_support.lua` keeps placement/delivery helpers local but exposes direct network receivers and a generic `RoundEnd` cleanup hook.
-- The file globally wraps `SpawnZBaseNPC`, affecting callers beyond Defense unless compatibility is proven.
-- Large waves combine one timer per NPC, repeated nav enumeration, tracked-table scans and world scans without an explicit performance budget.
+- `sv_defense.lua` owns voting, preparation, wave state, fallback spawning and timer services.
+- `sv_defense_waves.lua` owns nav/visibility search, spawn queues, NPC targeting and death tracking, and globally wraps `SpawnZBaseNPC`.
+- `sv_defense_roles.lua` owns role assignment, equipment, commander `NWInt` economy and wave rewards; `defense_commander_points` is dormant and role-assignment packets are redundant.
+- `sv_defense_support.lua` owns support/menu/purchase receivers, airdrops and reinforcements; its generic `RoundEnd` cleanup hook does not match the verified core emitter.
+- `sv_defense_hooks.lua` owns last-NPC highlight broadcasting and the admin command receiver.
+- Large waves combine per-NPC timers, repeated nav enumeration, tracked-table scans and world scans without an explicit performance budget.
 
-## Pathowogen surfaces
+## Pathowogen and Fear surfaces
 
-| Channel | Direction | Schema / notes |
-|---|---|---|
-| `zb_furbriefing`, `zb_furfurbriefing`, `zb_furtraitorbriefing` | S -> C | no payload; create role-specific panels |
-| `zb_commandertransmit`, `zb_contractortransmit` | S -> C | string message; server loops can resend to full recipient list repeatedly |
-| `zb_extractionheli` | S -> C | entity helicopter; client stores `zb.uwucopter`, validity/state lifecycle incomplete |
-| `zb_extractionpoint`, `zb_traitorextractionpoint` | S -> C | vector point; client global extraction state, repeated sends possible |
-| `ZB_Pathowogen_RoundEnd` | S -> C | uint3 outcome + Lua table keyed by players; unbounded/versionless complex table, entity disconnect semantics unresolved |
-
-Other Pathowogen surfaces:
-- point registries `UWU_GlideHeli`, `UWU_DeltaSquad`, `SCRAPPERS_BIGBOX`, `SCRAPPERS_SMALLBOX`, `SCRAPPERS_VEHICLE`;
-- player local var `zb_Pathowogen_Extraction`;
-- global simfphys convars modified without restoration;
-- Glide vehicle APIs, fake-ragdoll weld extraction, class/organism/inventory/armor/loot contracts;
-- global timers and EntIndex-based extraction timers.
-
-## Fear surfaces
-
-- Mode registry ID `fear`, base `hmcd`, inherited submodes renamed `standard2`/`soe2`; hard-disabled launch.
-- Network/player state: `disappearance`, `afterlife`, `willsuicide`, light color, custom collision, shadows/sound suppression.
-- Event registry `MODE.Events`, `MODE.StartedEvents[UserID]`; `scary_black_guy` spawns `ent_zc_anim` and uses dynamic Think hook.
-- External entities/services: `bot_fear`, fake ragdoll, `hg.BreakNeck`, visibility/light sampling, SendLua, global audio stations and screen effects.
-- Risk: directly registered hooks/timers may remain active while mode is unavailable/inactive; exact gating matrix pending.
+Pathowogen exposes briefing, dialogue, extraction entity/vector and complex end-report packets; global simfphys convars, fake-ragdoll weld extraction, timers, audio and render state lack a complete restore contract. Fear inherits Homicide, remains hard-disabled, yet loads direct hooks, network receivers, event registries, light sampling and screen/audio state that require inactive-mode gating proof.
 
 ## ConVars and persistence
 
 | Surface | Owner | Contract/risk |
 |---|---|---|
-| `hg_loadcontent` | global loader | replicated/archive toggle; workshop mounting calls commented |
-| `zb_forcemode` | round system | server force mode, reset to `random` on source load |
-| client presentation convars | spectator/Homicide/Crisis/Defense/Event | user settings; repeated/global acquisition patterns |
-| `sv_simfphys_fuel`, `sv_simfphys_fuelscale` | external addon, mutated by Pathowogen | global server behavior changed without restoration |
-| `data/zbattle/modeschances.json` | mode registry | mode/submode -> number; weak validation |
-| `data/zbattle/mapsizes.json` | round system | map -> threshold; weak decode/type guards |
-| Homicide PData counters | Homicide | integer-like wins/kills |
-| Event loot JSON | Event mode | hostname-derived path, unversioned/unvalidated shape |
-| CO-OP SQLite + external persistence | CO-OP | map completion and player state; partial/optional integration |
+| `hg_loadcontent` | global loader | replicated/archive content toggle |
+| `zb_forcemode` | round system | reset to `random` on source load |
+| client presentation convars | multiple modes | repeated/global acquisition patterns |
+| simfphys fuel convars | Pathowogen | global mutation without traced restoration |
+| mode chances/mapsizes JSON | registry/round system | weak decode/type guards |
+| Homicide PData | Homicide | integer-like counters |
+| Event loot JSON | Event | unversioned persistent client-authored data |
+| CO-OP SQLite/persistence | CO-OP | partial optional integration |
 
 ## Command surface highlights
 
-- Mode chances: `zb_getmodeschances`, `zb_setmodechance`, `zb_savemodeschances`, `zb_checkchances`, `zb_rerollchances`.
-- Project `COMMANDS`: `bigmap`, `setmode`, `setforcemode`, `endround`; registry owner/dispatcher still untraced.
-- Homicide: `hmcd_request_main_traitor` writes state whose consumer is commented.
-- Event: numerous concommands misuse `args` table as scalar, breaking settings/eventer operations.
-- CO-OP/Counter-Strike/other mode-specific commands require inclusion in the final command matrix.
+- Mode chance commands are cataloged.
+- Project `COMMANDS` entries include `bigmap`, `setmode`, `setforcemode`, and `endround`; registry owner/dispatcher remains untraced.
+- Defense `defense_admin_command` is a direct network administration surface with no repository sender.
+- Event concommands misuse the `args` table as a scalar in several paths.
 
-## Cross-system regression rules derived from current evidence
+## Cross-system regression rules
 
-1. Do not change a packet until every writer/reader and conditional branch is listed.
-2. Replace Lua-table network payloads only after recording size, shape, ownership and legacy clients.
-3. Consolidate duplicate protocols only after runtime-confirming effective last-writer behavior.
-4. Treat all client-supplied tables/strings/vectors as untrusted: type, length, count, ID, phase, permission and rate validation are required.
-5. Freeze authoritative winner/round results before delayed presentation callbacks.
-6. Centralize mode-owned global timers/hooks/audio/render/convar changes and prove cleanup on end, disconnect, cleanup, hotload and mode switch.
+1. Do not change packets before every writer, reader and conditional branch is listed.
+2. Record size, shape, ownership and compatibility before replacing Lua-table payloads.
+3. Runtime-confirm duplicate overwrite behavior before consolidation.
+4. Treat client tables/strings/vectors as untrusted and validate type, bounds, IDs, phase, permission and rate.
+5. Freeze authoritative results before delayed presentation callbacks.
+6. Centralize mode-owned timers/hooks/audio/render/convar state and prove cleanup.
 7. Classify every function-valued `MODE` member before retaining automatic hook registration.
 
 ## Next trace
 
-1. Close Defense highlight/commander point/role one-sided endpoints and direct-hook cleanup names.
-2. Trace remaining core one-sided channels (`FadeScreen`, `updtime`, spectator) and legacy admin consumers.
-3. Trace `COMMANDS`, spawn override, map-point fallback and round-hook emitters.
-4. Continue into organism, fake-ragdoll, movement and player-class ownership using the completed mode matrices.
+1. Pair core one-sided channels: `FadeScreen`, `updtime`, `ZB_SpectatePlayer`, and legacy queue consumers.
+2. Trace `COMMANDS`, spawn overrides, map-point fallback, `zb.EndMatch`, and actual round-hook emitters.
+3. Complete Pathowogen Derma/end-report and inactive-mode direct-hook audit.
+4. Begin organism initialization, state, replication, damage/medical lifecycle and fake-ragdoll integration.
