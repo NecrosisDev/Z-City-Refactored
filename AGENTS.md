@@ -1,21 +1,68 @@
-# Agent Operating Contract
+# ZCity Refactored Agent Contract
 
-This repository is the canonical workspace for all ZCity Refactored agent work.
+This file is the singular source of truth for how every agent works in this repository. Read it in full at the start of every session and before selecting, planning, reviewing, or implementing any work package.
 
-## Required workflow
+## Contract integrity
 
-1. Never commit directly to `main`; use a focused branch.
-2. Read `docs/INDEX.md` and `docs/WORK_PACKAGE.md` before changing code.
-3. Verify behavior from executable code; comments and legacy documentation are claims until confirmed.
-4. Keep each individual change within a scope the active agent can safely implement and validate, but do not stop the broader work stream merely because one bounded change is complete.
-5. Continue from the next unblocked work package until the requested system is fully integrated or progress is genuinely blocked by missing user input, inaccessible dependencies, or unavailable validation capability.
-6. Update the relevant catalog entry when behavior, public APIs, types, load order, networking, configuration, ownership, or integration state changes.
-7. Add or update a regression check for every bug fix and contract change where practical.
-8. Write implementation documentation at handoff depth: identify exact files, symbols, dependencies, data flow, invariants, edge cases, acceptance criteria, validation steps, and integration order so the next agent performs minimal rediscovery or design inference.
-9. Record unresolved assumptions, risks, evidence gaps, and the next concrete action in `docs/WORK_PACKAGE.md` before handoff.
-10. Commit messages must explain both what changed and why.
-11. End active sessions by arranging the next continuation step unless the requested system is fully integrated or further progress is blocked by required user input.
+- Preserve every rule in this file across all work packages and sessions.
+- User corrections and clarifications are cumulative and supersede only the specific earlier statement they correct; never silently reinterpret, weaken, omit, or replace unrelated rules.
+- Do not edit this contract for convenience, local optimization, or agent preference. Change it only to record an explicit user correction or clarification, preserving prior intent and documenting why.
+- If this contract is missing, materially contradictory, or known to have drifted from the user's established instructions, stop implementation and report that the canonical workflow must be reconstructed; do not invent a replacement.
+- The repository is durable memory. Chat history may provide context, but no agent may depend on unavailable conversation history to resume work.
 
-## Definition of done
+## Mandatory session startup
 
-"Work complete" means full system integration, not merely completion of a local edit, document, branch, or pull request. The requested system must be implemented across all required layers, validated against its acceptance criteria, documented to implementation-ready depth, checked for regressions, and left with no known unresolved integration gap; otherwise the next work package must be identified and continued.
+1. Read this file.
+2. Read `docs/INDEX.md` and `docs/WORK_PACKAGE.md`.
+3. Inspect the active branch, latest relevant commits, open pull request, validation state, and unresolved handoff items.
+4. State the current work package and ask only questions necessary to resolve the user's desired outcome or creative vision.
+5. Continue from verified repository state without restarting completed analysis or relying on undocumented assumptions.
+
+## Repository workflow
+
+- `NecrosisDev/Z-City-Refactored` is the canonical workspace for all agent output.
+- Never commit directly to `main`.
+- Use a focused branch whenever changes can be independently reviewed, validated, reverted, or continued.
+- Keep each work package within a scope the current agent can safely implement and validate; split large goals into dependency-ordered packages rather than reducing the integration target.
+- Commit messages must describe both what changed and why it was necessary.
+- Store detailed work, evidence, implementation guidance, decisions, validation, and handoff state in the repository. Chat responses must be TL;DR summaries of no more than two sentences.
+- Do not merge to `main` unless the user explicitly requests or authorizes it.
+
+## Evidence and knowledge rules
+
+- Reproducible runtime evidence and tests outrank executable code; executable code outranks catalogs and decision records; verified repository documentation outranks comments, historical notes, and inherited documentation.
+- Comments and legacy documentation are claims until verified against executable code or reproducible behavior.
+- Mark knowledge as `Verified`, `Inferred`, `Legacy Claim`, or `Planned`; never present inference or intent as current behavior.
+- Maintain lightweight living indexes of systems, behaviors, shared types, ownership, dependencies, initialization order, runtime flow, public contracts, networking, configuration, and integration state.
+- Update affected catalogs and decision records atomically with implementation changes. Do not create speculative entries merely to fill documentation.
+- Prefer compact Markdown and existing repository mechanisms. Add automation, CI, generators, hooks, or runtime systems only when they prevent a demonstrated regression or coordination failure and their maintenance cost is justified.
+
+## Implementation and handoff depth
+
+Documentation must be handoff-complete: another capable agent with no chat history must be able to implement or continue the work with minimal rediscovery and minimal design inference. Where applicable, record:
+
+- exact files, paths, symbols, realms, owners, and entry points;
+- verified current behavior and evidence;
+- desired behavior and approved design rationale;
+- prerequisites, dependencies, integration order, and migration constraints;
+- public interfaces, data contracts, invariants, preconditions, and postconditions;
+- control flow, data flow, lifecycle, networking, replication, trust boundaries, persistence, and configuration;
+- edge cases, failure modes, compatibility constraints, security concerns, and performance implications;
+- independently executable implementation steps;
+- automated and manual validation procedures with expected results;
+- regression risks, acceptance criteria, known limitations, unresolved evidence gaps, and the exact next action.
+
+## Regression prevention
+
+- Add or update a regression check for every bug fix and contract change where practical.
+- Before handoff, review adjacent callers, consumers, hooks, network payloads, shared state, load order, persistence, UI, permissions, and compatibility surfaces affected by the change.
+- Do not treat a local pass as integration success. Validation must cover the required layers and interactions for the requested system.
+- Do not bloat the project with duplicate abstractions, reports, registries, or tooling. Extend the smallest authoritative mechanism that closes the demonstrated gap.
+
+## Continuation and completion
+
+- Work may span multiple responses and sessions. Continue for as long as practical, then leave a repository-complete handoff and arrange the next automated continuation step.
+- Do not stop because a document, edit, commit, branch, pull request, or bounded work package is locally complete. Select the next unblocked dependency-ordered package and continue.
+- Stop only when required user input, inaccessible dependencies, unavailable validation capability, or a safety constraint genuinely blocks further progress; document the blocker and the exact decision or resource needed.
+- `Work complete` means full system integration: all required layers are implemented, validated against explicit acceptance criteria, documented at handoff depth, regression-reviewed, and free of known unresolved integration gaps.
+- Until full integration is achieved, `docs/WORK_PACKAGE.md` must identify the active or next work package, evidence state, risks, dependencies, validation status, and exact continuation action.
