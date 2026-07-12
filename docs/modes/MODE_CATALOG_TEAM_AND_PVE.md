@@ -14,7 +14,7 @@ This grouped catalog covers team/PvE modes with broad NPC, map, persistence, veh
 |---|---|---|---|---|---|
 | `hl2dm` | `hl2dm` | none | `sh_hl2dm.lua`, `sv_hl2dm.lua`, `cl_hl2dm.lua` | unconditional `true` | teams/spawns, classes, inventory, attachments, canister airstrike |
 | `coop` | `coop` | none | `sh_coop.lua`, `sv_coop.lua`, `cl_coop.lua` | requires `trigger_changelevel` | HL2 maps/NPCs, SQL, persistence, classes, inventory, possession |
-| `defense` | `defense` | none | `sh_defense.lua`, `sv_defense.lua`, partial `cl_defense.lua` | spawn + nav area | external wave/music/support files, NPC bases, timers, classes |
+| `defense` | `defense` | none | `sh_defense.lua`, `sv_defense.lua`, `sv_defense_waves.lua`, `sv_defense_roles.lua`, `sv_defense_support.lua`, `cl_defense.lua` | spawn + nav area | wave/music/economy data, NPC bases, timers, commander support, classes |
 | `criresp` | `criresp` | none | `sh_criresp.lua`, `sv_criresp.lua`, `cl_criresp.lua` | >3 SWAT points, suspect point, >5 playing players | readiness/customization, fake ragdoll, physical bullets, armor/inventory |
 | `pathowogen` | `pathowogen` | none | `sh_uwu.lua`, `sv_uwu.lua`, `cl_uwu.lua`, `sv_dialogue.lua` | hard-disabled (`CanLaunch()==false`) | Glide/simfphys, extraction, fake ragdoll, classes, organism, inventory, loot, dialogue/UI |
 
@@ -69,24 +69,70 @@ Campaign map/trigger/point combinations; zero/spectator-only; persistence absent
 
 ## `MODE-defense` — NPC Defense
 
-### Contract
+### Verified files and ownership
 
-- Files: `sh_defense.lua` `c442fdab...`; `sv_defense.lua` `5880d943...`; client `cl_defense.lua` `8ce0d36a...` partially traced.
-- Chance `.02`, loot, spawn+nav launch; `STANDARD`/`EXTENDED`/`ZOMBIE` vote choices.
-- Intermission resets state, calls `EndWave()` at wave 0, starts vote; preparation equips/respawns then starts waves.
-- Tracked entities plus full-world scan determine completion; end performs broad NPC/entity cleanup.
-- External methods/globals remain unresolved: wave definitions/music, spawn/start/complete, support, role clearing, `zb.EndMatch`.
+- `sh_defense.lua` blob `c442fdab...`: point registries and `STANDARD`/`EXTENDED`/`ZOMBIE` mode data.
+- `sv_defense.lua` blob `5880d943...`: core lifecycle, voting, preparation, timers, entity tracking and cleanup.
+- `sv_defense_waves.lua` blob `03aaf158...`: spawn visibility/nav search, wave queue, NPC creation/targeting and `OnNPCKilled`.
+- `sv_defense_roles.lua` blob `fc7b5f46...`: roles, base equipment, commander points, wave rewards and player spawning.
+- `sv_defense_support.lua` blob `d69c1a90...`: commander menu/purchases, airdrops, support team and player reinforcements.
+- `cl_defense.lua` blob `8ce0d36a...`: HUD, voting, outlines, wave music, commander UI/support requests and end presentation.
+
+### Lifecycle and subsystem contract
+
+- Chance `.02`, loot enabled, launch requires at least one usable player spawn and one nav area.
+- Intermission resets mode state, cleans the map, assigns team 1, calls `EndWave()` while wave is zero, then opens a 15-second vote.
+- Voting accepts option 1..3 with one-second per-player submit/change limits; ties are selected randomly.
+- Preparation respawns/equips players, sends a 30-second deadline, then starts wave 1.
+- Wave definitions come from `DEFENSE_WAVE_DEFINITIONS`; music comes from `DEFENSE_MUSIC`.
+- Wave spawning queues one timer per planned NPC, searches nav/ground locations outside player visibility, supports engine NPCs, ZBase, VJ/NextBot classes, assigns targets, and tracks entities in `DefenseWaveEntities`.
+- Completion is detected both through `OnNPCKilled` and a two-second tracked/full-world scan.
+- Roles are Commander, Medic, Engineer and Soldier. Commander gains supply points per wave and double points for boss waves.
+- Commander support owns `RequestSupport`, `defense_commander_menu`, `defense_commander_purchase`, `defense_commander_notification`, role and point channels.
+- End broadcasts, ends wave, clears roles/timers/state, then removes broad NPC/project/integration class patterns.
+
+### Verified packet contracts
+
+- Vote: deadline float; submit int4; change previous+new int4; updates/results use small unversioned Lua tables; selected mode uses string.
+- `npc_defense_newwave` writes float deadline + int4 wave; traced client reads only deadline.
+- `RequestSupport` accepts a server-catalogued support string after role/mode/incapacitation, two-second sender and global 290-second cooldown checks.
+- Commander menu is bidirectional on one name: client request has no payload; server reply is `DEFENSE_COMMANDER_ITEMS` table.
+- Commander purchase accepts a Lua table, caps raw message length to 8192, table entries to 20, quantity to 10, resolves catalog items server-side and applies a one-second sender limit.
+- `defense_commander_notification` writes string message + int16 point delta.
+- `defense_highlight_last_npcs`, `defense_commander_points` and final role-assigned client ownership still require line-level pairing.
 
 ### Verified defects
 
-- Guilt argument shift; global timer names; wave-0 `EndWave` side effects.
-- Double entity traversal/debug spam and overbroad cleanup of unrelated integrations.
-- Server writes deadline+wave while traced client reads only deadline.
-- Team-1 HUD assumption; unresolved support security; restart may race global lifecycle.
+1. Dot-defined `GuiltCheck` receives shifted arguments.
+2. Core, wave and role files place many internal services directly on `MODE`, publishing them as hook names (`CreateTimer`, `SpawnWave`, `FindNavMeshSpawnPoint`, `AssignPlayerRoles`, `OnWaveComplete`, and others).
+3. Timer names are global and generic (`vote_end_timer`, `prep_phase_timer`, `new_wave_timer`, spawn names), with hotload/collision risk.
+4. Intermission calls `EndWave()` at wave zero, invoking music cleanup, ragdoll/weapon sweep and `OnWaveComplete()` before voting.
+5. Wave tracking duplicates `OnNPCKilled`, tracked-table scans and full-world scans; debug output runs during normal changes.
+6. End cleanup removes every NPC and classes matching broad `npc_vj_`, `sent_vj_`, `zb_`, or `terminator_nextbot_` patterns, including unrelated/admin/integration entities.
+7. New-wave packet has an unread int4 field.
+8. HUD assumes team 1 and mutates shared role colors.
+9. `StartWave()`/`EndWave()` index music tables by current wave without a documented nil-safe data contract.
+10. Wave spawn creates one named timer per NPC and performs repeated all-nav-area searches; high-wave cost is not budgeted.
+11. Global replacement of `SpawnZBaseNPC` wraps an external function and changes behavior outside the mode unless all callers are compatible.
+12. Commander purchase table schema is implicit; quantity is capped above but not explicitly type/lower-bound normalized before arithmetic.
+13. `RequestSupport` role/mode/catalog/cooldown checks exist, but global cooldown lets one commander block all others and delayed delivery captures sender/mode state.
+14. Airdrop and support entities are created with partial validity checks; fall timers are not consistently mode-owned through `MODE:CreateTimer`.
+15. Reinforcement support can respawn players during an active wave and reapply equipment independently from the role lifecycle.
+16. `RoundEnd/CleanupSupportTeam` listens to a generic hook name; verified core lifecycle emits `ZB_EndRound`, so cleanup emission compatibility is unresolved.
+17. Fallback `gamemode_restart` can race the global round lifecycle when `zb.EndMatch` is absent.
+18. Duplicate network registrations across auxiliary files obscure ownership even where schemas match.
 
 ### Validation
 
-Enumerate all files; resolve wave/support endpoints; vote/timer lifecycle; all submodes/bosses/NPC bases; unrelated entity survival; packet schema; fallback restart/security.
+- All vote transitions, changes, ties, reconnects and timer cleanup.
+- Every submode/wave/boss definition and missing/malformed data table.
+- Engine, ZBase, VJ and NextBot spawn paths; nav absence and no-hidden-spawn conditions.
+- Large-wave timer/nav/entity-scan budgets and duplicate death counting.
+- Commander purchase/support fuzzing, point arithmetic, refunds, cooldown scope and delayed sender disconnect/mode switch.
+- Role assignment with low populations where random removal can exhaust player arrays.
+- Unrelated NPC/addon entity survival through round end.
+- Packet bit-count capture, especially new-wave, commander points/role and highlight endpoints.
+- Runtime hook instrumentation for all accidentally published wave/spawn/timer helpers.
 
 ---
 
@@ -169,7 +215,7 @@ Spectator/AFK/cap assignment; readiness/disconnect; winner/sniper semantics; zon
 
 ## Next trace
 
-1. Enumerate Defense auxiliary files and resolve support/wave endpoints.
+1. Close the remaining one-sided Defense highlight/commander point/role endpoints and client line-level schemas.
 2. Trace CO-OP persistence/changelevel owner and round-hook naming.
-3. Complete Pathowogen derma/extraction endpoint pairing and inactive-hook audit.
-4. Continue unresolved mode directories while updating inheritance and public-surface matrices.
+3. Complete Pathowogen Derma/extraction endpoint pairing and inactive-hook audit.
+4. Continue from mode matrices into organism, fake-ragdoll, movement and player-class ownership.
