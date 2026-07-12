@@ -1,7 +1,7 @@
 # Public Surfaces Inventory
 
 **Work package:** `WP-RESEARCH-001`  
-**Scope:** bootstrap, mode/round framework, cataloged modes, organism, fake-ragdoll, movement, player classes, and their character-runtime integration  
+**Scope:** bootstrap, mode/round framework, cataloged modes, organism, fake-ragdoll, movement, player classes, weapon-facing character-runtime interfaces, and their integration  
 **Status:** `partial / executable-source verified`  
 **Runtime source baseline:** `429ec928203cec963176dfb6afd086dcdd01c181`  
 **Reviewed:** 2026-07-12
@@ -109,6 +109,21 @@ Organism schema groups and extension fields are documented in `ORGANISM_SYSTEM.m
 
 Movement consumes organism state, class fields/NWInts, active weapon interfaces, armor/inventory/carried mass, mode hooks and fake ownership. Realm-local `SysTime` and replayed player fields make prediction a public behavior boundary.
 
+## Weapon-facing character-runtime surfaces
+
+The first executable-source weapon trace is the server `Think/Fake` consumer in `lua/homigrad/fake/sv_control.lua` blob `22c87ad4148716ff1173c104e7df943043b09ce5`.
+
+| Surface | Contract/risk |
+|---|---|
+| `ishgweapon(wep)` | implicit global firearm classifier; definition and accepted bases unresolved |
+| `wep:IsPistolHoldType()` | hold-profile query used for body orientation; method assumed for classified weapons |
+| `wep.IsResting` / `wep:IsResting()` | resting/aim posture query with inconsistent existence guarding |
+| `wep.RagdollFunc` | weapon-owned callback inside the monolithic per-frame fake controller; signature, publishers, cleanup and mutation limits unresolved |
+| `wep.ismelee`, `wep.ismelee2` | ad-hoc capability flags sharing attack/use input with generic fake control |
+| active weapon across `hg.Fake` / `hg.FakeUp` | selected class is preserved around respawn, but complete instance/clip/ammo/reload/attachment/cooldown state restoration is unproven |
+
+The fake controller also owns limb gates, generic arm poses, hand constraints, organism pain/stamina feedback, and input precedence around weapon callbacks. The path is server authoritative, per frame, and has no verified command number/body generation or callback-result replication contract. Detailed findings are in `architecture/WEAPON_COMBAT_INTERFACES.md`.
+
 ## Player-class APIs, registry, and trust boundary
 
 | Surface | Contract/risk |
@@ -164,11 +179,12 @@ Defense owns wave/vote/timer/spawn/role/economy/support/admin extensions, global
 6. Centralize timers/hooks/constraints/audio/render/convar resources and prove cleanup.
 7. Treat organism order, movement prediction and fake ownership as public behavior.
 8. Do not migrate organism/fake/movement/class independently; use the character integration graph.
+9. Do not formalize a weapon adapter until every current capability publisher and consumer is enumerated.
 
 ## Next trace
 
-1. Trace weapon interfaces consumed by movement, organism damage, active-ragdoll control, class loadouts and modes.
-2. Trace physical bullets, ammunition, armor and explosives.
-3. Trace inventory/equipment/appearance ownership across round/class/fake transitions.
-4. Trace NPC/bot organism, faction, bullseye and fake-body consumers.
+1. Enumerate `ishgweapon`, every `RagdollFunc`, hold/resting/melee capability publisher, and weapon switch/drop/pickup cleanup.
+2. Trace physical bullets, ammunition, reload/chamber state, projectiles, armor and explosives.
+3. Close the still-unresolved `COMMANDS`, spawn override, point-system, `OverideSpawnPos`, and `zb.EndMatch` inventories only from exact fetched paths; do not overstate repository-wide absence.
+4. Trace inventory/equipment/appearance ownership across round/class/fake transitions.
 5. Update the combined character-runtime graph with those boundaries before implementation planning.
