@@ -18,7 +18,7 @@ This document provides an exact file/hash inventory for the uploaded local archi
 - Global Lua-tree files: **814**
 - Exact duplicate-content groups: **2** covering **12** files
 
-The complete path, candidate repository path, byte size, SHA-256 and Git blob SHA-1 inventory is stored in [`local_archive_manifest/`](local_archive_manifest/README.md).
+The complete 1,040-row CSV is reproducible from the pinned archive using [`tools/generate_local_archive_manifest.py`](tools/generate_local_archive_manifest.py). Its canonical SHA-256 is `28f6eca648b80d6eca1419ce3e30fc60d2971ab743457d23aeee9d5a261cd4b0`; reproduction instructions and evidence policy are recorded in [`local_archive_manifest/`](local_archive_manifest/README.md).
 
 ## Major path groups
 
@@ -113,6 +113,6 @@ No repository-wide counts of identical, modified, archive-only, repository-only 
 ## Next action
 
 1. Obtain a recursive repository tree or source archive for commit `429ec928203cec963176dfb6afd086dcdd01c181`.
-2. Join it against the generated CSV parts in `local_archive_manifest/` using exact paths, the explicit Trauma-to-ZCity candidate mapping and content hashes.
+2. Regenerate the canonical CSV from the pinned archive and join it against the repository manifest using exact paths, the explicit Trauma-to-ZCity candidate mapping and content hashes.
 3. Classify every row as identical, modified, archive-only, repository-only, rename candidate, generated, vendored dependency or excluded evidence.
 4. Use that result to split the existing `PORT-*` inventory into subsystem-sized, reviewable implementation work packages.
