@@ -49,7 +49,7 @@ Ensure every future agent begins each session with the same cumulative operating
 | Every session has an explicit startup sequence | Pass | `AGENTS.md` and `docs/INDEX.md` |
 | Conversation history is not required | Pass | Contract requires repository-complete handoff |
 | Contract drift has a defined failure response | Pass | `AGENTS.md` contract-integrity section |
-| Branch divergence | Pass | 15 commits ahead of `main`, 0 behind before this handoff correction |
+| Branch divergence | Pass | Latest comparison reports the branch ahead of `main` and zero commits behind; compare again immediately before merge |
 | Pull request mergeability | Pass | PR `#2` reports mergeable |
 | Changed-file scope | Pass | Exactly eight Markdown files |
 | Main branch modified | No | All changes remain on `chore/agent-knowledge-contract` |
