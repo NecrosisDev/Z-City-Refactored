@@ -1,18 +1,30 @@
 # Z-City Refactored Documentation
 
-This directory is the maintained, code-grounded knowledgebase for the refactor.
+This directory is the maintained, code-grounded knowledgebase for the refactor. It is the single documentation index for the active research branch.
 
-## Documentation authority
+## Session startup
 
-Documentation describes the code at a named commit. When documentation and implementation disagree, the implementation is authoritative until the discrepancy is verified and corrected.
+Every agent must read these files in order:
 
-Each architecture document should record:
+1. [`../AGENTS.md`](../AGENTS.md) — cumulative operating contract.
+2. [`WORK_PACKAGE.md`](WORK_PACKAGE.md) — current scope, evidence, validation, risks, and exact continuation action.
+3. The architecture documents and catalogs linked by the active work package.
 
-- the commit or branch reviewed;
-- the relevant source paths;
-- which statements are verified, inferred, or still unverified;
-- known mismatches between comments, documentation, and runtime code;
-- the next trace work required to complete the subject.
+## Active research state
+
+- **Branch:** `docs/architecture-baseline`
+- **Review surface:** PR `#1`
+- **Phase:** code-grounded project research and documentation baseline
+- **Rule:** continue all research work packages on this branch; do not create per-package branches.
+
+## Knowledge authority
+
+1. Reproducible tests and runtime evidence.
+2. Executable code.
+3. Evidence-linked architecture documents, catalogs, and decision records.
+4. Comments, historical notes, and inherited documentation.
+
+Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`. When documentation and implementation disagree, implementation remains authoritative until runtime evidence proves otherwise.
 
 ## Current documents
 
@@ -21,9 +33,14 @@ Each architecture document should record:
 - [`architecture/PROJECT_SETUP.md`](architecture/PROJECT_SETUP.md) — repository layout, addon/gamemode split, namespaces, subsystem boundaries, persistence, dependencies, and structural risks.
 - [`architecture/BOOTSTRAP_AND_LOAD_ORDER.md`](architecture/BOOTSTRAP_AND_LOAD_ORDER.md) — global addon bootstrap, gamemode bootstrap, Lua realm routing, recursive load order, mode registration, and round startup.
 
-## Planned documents
+### Living catalogs
 
-The next documentation passes should cover:
+- [`SYSTEM_CATALOG.md`](SYSTEM_CATALOG.md) — runtime systems, ownership, entry points, dependencies, public surfaces, integration state, and validation.
+- [`BEHAVIOR_CATALOG.md`](BEHAVIOR_CATALOG.md) — externally observable runtime and gameplay behaviors.
+- [`TYPE_CATALOG.md`](TYPE_CATALOG.md) — shared tables, registries, identifiers, payloads, schemas, and compatibility contracts.
+- [`decisions/README.md`](decisions/README.md) — compact architectural decisions that must not be repeatedly rediscovered.
+
+## Dependency-ordered research queue
 
 1. complete loaded-file and realm manifest;
 2. global symbol and public API registry;
@@ -34,29 +51,12 @@ The next documentation passes should cover:
 7. inventory, equipment, appearance, and clothing;
 8. NPC and bot architecture;
 9. UI, HUD, camera, spectator, and screen effects;
-10. persistence, administration, security, and external integrations.
+10. persistence, administration, security, and external integrations;
+11. cross-system integration map, regression risks, and implementation-ready remediation packages.
 
-## Suggested long-term structure
+## Maintenance rules
 
-```text
-docs/
-├─ README.md
-├─ architecture/
-├─ systems/
-├─ modes/
-├─ integrations/
-├─ operations/
-└─ reference/
-   ├─ FILE_MANIFEST.md
-   ├─ GLOBAL_SYMBOLS.md
-   ├─ HOOKS.md
-   ├─ NETWORK_MESSAGES.md
-   ├─ CONVARS_AND_COMMANDS.md
-   ├─ DATA_FILES.md
-   ├─ WEAPONS.md
-   ├─ ENTITIES.md
-   ├─ MODES.md
-   └─ DEPENDENCIES.md
-```
-
-Avoid creating placeholder files before their contents have been verified against the code.
+- Keep this file compact; detailed evidence belongs in the linked documents, code references, commits, PR discussion, and validation records.
+- Update documents atomically when new evidence changes a claim.
+- Do not create duplicate indexes or empty placeholder documents.
+- Each completed trace must leave exact paths, symbols, dependencies, failure modes, validation steps, evidence gaps, and the next dependency-ordered action.
