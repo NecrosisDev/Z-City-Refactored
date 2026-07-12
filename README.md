@@ -1,6 +1,15 @@
 # Z-City
 Z-City is a GMod addon which modifies character damage and controls. Z-City also comes with its own weapon base and a gamemode
 
+## Documentation
+
+The maintained, code-grounded project knowledgebase is available under [`docs/`](docs/README.md).
+
+Start with:
+
+- [`docs/architecture/PROJECT_SETUP.md`](docs/architecture/PROJECT_SETUP.md) for the repository and subsystem map;
+- [`docs/architecture/BOOTSTRAP_AND_LOAD_ORDER.md`](docs/architecture/BOOTSTRAP_AND_LOAD_ORDER.md) for realm routing, initialization order, mode loading, and round startup.
+
 https://github.com/uzelezz123/8bit_zcity - 8bit module (compiled version is in lua/bin)
 
 Optional Discord RPC module for clients:
