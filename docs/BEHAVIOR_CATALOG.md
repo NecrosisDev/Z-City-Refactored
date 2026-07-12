@@ -4,73 +4,84 @@ Externally observable behavior is recorded independently from implementation str
 
 ## `BEH-REALM-GLOBAL` — Global addon files are routed by exact prefix/suffix with shared fallback
 
-- **Status:** `partial` — routing code verified; complete runtime manifest pending.
-- **Actors/context:** Server and clients loading `lua/homigrad` and `lua/initpost`.
-- **Trigger/result:** Autorun loader; exact realm prefixes/suffixes, unmarked shared fallback, current-directory files before children.
-- **Edge cases:** unsorted enumeration, exact-marker limits, ixhl2rp early exit and client delivery of unmarked files.
-- **Regression:** instrument include path/realm/order on dedicated server/client.
-- **Related:** `SYS-BOOTSTRAP-GLOBAL`, `TYPE-HG-BOOTSTRAP`.
-- **Last verified:** loader blob `c250ed9129cfc61ef43c1ee0bb6c0fde0a0d53e5`, 2026-07-12.
+- **Status:** `partial`.
+- **Trigger/result:** Autorun routes exact realm prefixes/suffixes; unmarked files are shared; current-directory files precede children.
+- **Edge cases:** unsorted enumeration, marker limits, ixhl2rp early exit and client delivery of unmarked files.
+- **Regression:** log include path/realm/order on dedicated server/client.
+- **Related:** global bootstrap system/type.
 
 ## `BEH-REALM-GAMEMODE` — Gamemode files use substring routing and child-first recursion
 
 - **Status:** `partial`.
-- **Trigger/result:** gamemode loader recurses children before files; substring `sv_`/`sh_`/`cl_`; unmarked files ignored.
-- **Edge cases:** substring misclassification, silent unloaded files, unsorted order and difference from global loader.
-- **Regression:** compare discovered and actually included server/client manifests.
-- **Related:** `SYS-BOOTSTRAP-GAMEMODE`.
-- **Last verified:** loader blob `b1754dff2d53012a05cb109f26b75eae118b14ce`, 2026-07-12.
+- **Trigger/result:** child directories precede files; substring realm matching; unmarked files ignored.
+- **Edge cases:** path misclassification, silent unloaded files, unsorted order and mismatch with global loader.
+- **Regression:** compare discovered and included realm manifests.
+- **Related:** gamemode bootstrap.
 
 ## `BEH-MODE-DISPATCH` — Current mode functions are dispatched through shared hook callbacks
 
-- **Status:** `partial` — complete known source matrix; runtime external hook coverage pending.
-- **Trigger/result:** every function-valued mode member becomes a hook candidate; dispatcher selects main/current/tdm and calls with mode table first.
-- **Edge cases:** internal helpers exposed, dot-function argument shift, empty overrides, disabled-mode callbacks and inherited surfaces.
-- **Regression:** selected realm/mode, self/arguments, nil/multiple returns, fallback, inheritance, hotload and accidental helper emission.
-- **Related:** mode registry/types and `MODE_FUNCTION_MATRIX.md`.
-- **Last verified:** loader blob `b1754dff2d53012a05cb109f26b75eae118b14ce`, 2026-07-12.
+- **Status:** `partial` — known source matrix complete; runtime external emissions pending.
+- **Trigger/result:** every function-valued mode member becomes a hook candidate; selected mode receives the mode table first.
+- **Edge cases:** internal helpers, dot-function argument shift, empty/inherited callbacks and disabled-mode surfaces.
+- **Regression:** realm/mode/arguments/returns/fallback/inheritance/hotload and accidental helper calls.
+- **Related:** mode registry/types and matrix.
 
-## `BEH-MODE-SELECTION` — Server builds, overrides, and synchronizes the future round sequence
+## `BEH-MODE-SELECTION` — Server builds, overrides, and synchronizes future rounds
 
 - **Status:** `partial`.
-- **Trigger/result:** eligibility/chances/queue/force actions build a 20-entry list and synchronized next/force state.
-- **Edge cases:** invalid/empty sets, two queue models, unbounded admin tables and randomness/order.
-- **Regression:** deterministic chances, eligibility, force/queue/persistence and unauthorized/malformed transport.
-- **Related:** mode/round systems and queue type.
-- **Last verified:** round blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`, 2026-07-12.
+- **Trigger/result:** chances/eligibility/queue/force actions build and synchronize future/next mode state.
+- **Edge cases:** invalid sets, two queue models, unbounded admin tables and random order.
+- **Regression:** deterministic selection, persistence and unauthorized/malformed transport.
 
 ## `BEH-ROUND-CYCLE` — Rounds progress through pre-round, active, end, and preparation states
 
 - **Status:** `partial`.
-- **Trigger/result:** server one-second Think advances `0 -> 1 -> 3 -> 0`, synchronizes clients and invokes mode/reset/equipment/intermission work.
-- **Edge cases:** stale state 2, CO-OP/changelevel, spawn/fake get-up, external failure and realm-local same-name callbacks.
-- **Regression:** dedicated full cycle, late join/disconnect, force/random, timeout/admin end, player reset and packet values.
-- **Related:** round system/state/payload.
-- **Last verified:** server `324491...`, client `fa6181...`, 2026-07-12.
+- **Trigger/result:** one-second server Think advances `0 -> 1 -> 3 -> 0`, synchronizes clients and invokes mode/reset/equipment/intermission work.
+- **Edge cases:** stale state 2, CO-OP/changelevel, fake get-up spawn and external failures.
+- **Regression:** full dedicated cycle, late join/disconnect, selection, timeout/admin end and reset.
 
-## `BEH-ORGANISM-LIFECYCLE` — Physiological state follows the character through injury, fake ragdoll, unconsciousness and death
+## `BEH-ORGANISM-LIFECYCLE` — Physiological state follows injury, fake ragdoll, unconsciousness and death
 
-- **Status:** `partial` — source verified; deterministic/runtime integration incomplete.
-- **Actors/context:** players, supported NPCs, fake/death ragdolls, damage, modes/classes, medical systems and observing clients.
-- **Trigger/result:** organism attachment/clear/transfer, 10 Hz modules, organ damage, fake/get-up/death; shared state determines control/life and is replicated/interpolated.
-- **Ownership:** player and ragdolls may share one table while owner changes.
-- **Edge cases:** load order, module overwrites, unsupported models, extreme values, delayed owner transfer and unversioned/high-cost transport.
-- **Regression:** schema/order/owner fixtures, every damage/model/armor/collision/amputation path and population network cost/privacy.
+- **Status:** `partial`.
+- **Trigger/result:** attach/reset/transfer, 10 Hz physiology, organ damage, fake/get-up/death and snapshot replication.
+- **Ownership:** player and ragdolls may share one table while authority moves.
+- **Edge cases:** load/module order, unsupported models, extreme values, stale callbacks and unversioned/high-cost transport.
+- **Regression:** schema/order/owner fixtures, complete damage/model/armor matrix and population cost/privacy.
 - **Related:** organism system/types and fake lifecycle.
-- **Last verified:** Tier 0 `1b8a...`, core `483050...`, damage `cce5ff...`, 2026-07-12.
 
-## `BEH-FAKE-RAGDOLL-LIFECYCLE` — A living player can transition into a controllable physical body and return through respawn
+## `BEH-FAKE-RAGDOLL-LIFECYCLE` — A living player can become a controllable physical body and return through respawn
 
-- **Status:** `partial` — core source behavior verified; runtime ordering, every integration and performance limits pending.
-- **Actors/context:** living/dead player, current/old/death ragdolls, organism, weapons, vehicles, NPCs, camera/render clients and spawn/round systems.
-- **Entry trigger:** voluntary `fake` command, organism unconscious/fake request, fall/collision/class behavior, vehicle hook, mode/item/admin force.
-- **Entry result:** custom ragdoll is created/adopted, posed and physically initialized; appearance/organism/identity/NPC bullseye/vehicle state are attached; player is hidden and moved to noninteractive collision while remaining alive; fake ownership is replicated.
-- **Active result:** server per-frame control drives body physics from player buttons/view, organism power and weapon/class state; supports pose, crawl, grab, use/pickup, choke, combat, stamina, pain, fire and vehicle behavior; player entity follows the ragdoll.
-- **Death result:** active body is reused as death ragdoll, wounds/identity remain, engine ragdoll is suppressed, camera/render follow changes.
-- **Get-up trigger/result:** velocity/stun/organism/external hooks and safe hull position are checked; player is respawned under spawn-override state, health/armor/weapon/position are partially restored, old body is removed and rendering/collision/movement return.
-- **Client result:** NWEntity proxies primarily reconstruct fake/death ownership; custom packet supplies ragdoll index; render/camera follow and smooth bone interpolation run through transition.
-- **Edge cases:** partial creation, ragdoll removal kills living owner, undefined `ReadEntity2`, packet/NW/proxy reorder, shared organism stale callbacks, global spawn override errors, timer/EntIndex reuse, unsupported skeleton/physics, vehicle destruction, per-frame cost and camera/render leaks.
-- **Implementation evidence:** `fake/sv_tier_0.lua`, `sv_control.lua`, `sv_input.lua`, `cl_fake.lua`, `sh_render.lua`; `architecture/FAKE_RAGDOLL_SYSTEM.md`.
-- **Regression procedure:** assert one body generation across every server/client reference; failure injection for create/fake/get-up/death/disconnect; latency/PVS/late join; controls/combat/constraints/fire; model/vehicle matrix; performance and camera/render restoration.
-- **Related:** `SYS-FAKE-RAGDOLL`, `TYPE-FAKE-RAGDOLL-STATE`, `TYPE-FAKE-RAGDOLL-PAYLOAD`, `TYPE-FAKE-CONTROL-STATE`, organism behavior.
-- **Last verified:** server `0fa522db3f0562eaf1816d6452fa082aef81d2bb`; control `22c87ad4148716ff1173c104e7df943043b09ce5`; client `bdd7e6a215da568a2070bd9b33e29244f1970f90`; 2026-07-12.
+- **Status:** `partial`.
+- **Entry result:** custom body is created/adopted, identity/organism/appearance/NPC/vehicle state attached, player hidden/noninteractive and ownership replicated.
+- **Active result:** per-frame server control drives physics from input, organism, weapon and class state; supports crawl/grab/use/choke/combat/fire and follows the hidden player.
+- **Death/get-up:** body is reused on death; get-up checks velocity/stun/space, respawns under override, partially restores state and removes old body.
+- **Client result:** NWEntity proxies primarily own fake/death state; custom packet/index overlaps render/camera transition.
+- **Edge cases:** partial creation, undefined `ReadEntity2`, ownership reorder, global spawn override, stale timers, unsupported physics/vehicles and per-frame cost.
+- **Regression:** one body generation across every transition/failure/latency/PVS path, controls/vehicles and camera/render restoration.
+- **Related:** fake system/types and organism behavior.
+
+## `BEH-MOVEMENT-CALC` — Ordinary movement is recomputed from physiology, class, weapon, load, stance, and inertia on both realms
+
+- **Status:** `partial` — source path verified; server/client prediction convergence unproven.
+- **Actors/context:** living non-fake player, shared `SetupMove`, organism, current class, active weapon, carried entity, mode hooks and movement convars.
+- **Trigger:** every movement command on server and predicting client.
+- **Observable result:** the system calculates walk/run/crouch/backward state, load and physiological power; applies class/NW/weapon/mode modifiers; rewrites forward/side movement and maximum speed; sets jump power; processes inertia, carry reach, slipping and dive-fake; updates animation/footstep/stamina state.
+- **Fake interaction:** normal movement is suppressed/redirected when a fake body is active; fall/slip/dive and organism state can enter fake.
+- **Convar behavior:** disabling `hg_inertia` does not disable the movement system; it primarily removes acceleration interpolation while the hook still owns speed/jump/input and transitions.
+- **Edge cases:** realm-local `SysTime`, stale client organism/class/weapon state, prediction replay of mutable fields, input values reused after rewrite, nil matrices/physics/weapon data, zero/extreme modifiers and overlapping ordinary/fake ownership.
+- **Regression procedure:** per-command server/client modifier trace under latency/replay; full organism/class/weapon/load/stance matrix; fake/fall/slip/get-up transitions; population cost.
+- **Related:** `SYS-MOVEMENT`, `TYPE-MOVEMENT-CONTEXT`, character integration graph.
+
+## `BEH-PLAYER-CLASS-TRANSITION` — A class change can reconfigure identity, equipment, physiology, movement, faction, and presentation
+
+- **Status:** `partial` — registry/transition/transport and representative classes verified; all class hooks/consumers incomplete.
+- **Actors/context:** player, old/new shared class definitions, mode/round caller, client mirrors and class-owned integrations.
+- **Server trigger/result:** `SetPlayerClass` calls old `Off`, writes class field/NetVar, broadcasts class ID + Lua table, calls new `On` with original args, resets movement NWInts, then emits `PlayerClass`.
+- **Client result:** client receives ID/table, writes the class field, calls new `On(data)` and emits `PlayerClass`; old client class `Off` is not called.
+- **Death result:** class `PlayerDeath` runs, then ID is cleared and default is broadcast; side-effect cleanup depends on class-specific code.
+- **Think result:** class `Think` is invoked through `Org Think`, but one `nextThink` timestamp on the shared class table lets only one same-class player run per interval.
+- **Critical trust behavior:** the server accepts the same `playerclass` ID/table payload from any valid client and directly calls `SetPlayerClass`; no legitimate repository client sender or authorization/phase/rate checks were found.
+- **Observable class effects:** models/bodygroups/name/role, loadout/armor/inventory, organism/movement/fake modifiers, NPC faction hooks, guilt, sounds, footsteps, phrases, gestures and HUD.
+- **Edge cases:** raw server args versus normalized client table, nil `data` indexing, NW multipliers reset after `On`, mixed-case IDs, incomplete/empty `Off`, transition errors without rollback, persistent global hooks/NPC relationships and EntIndex reuse.
+- **Regression procedure:** security fuzz/replay, every class-to-class transition while standing/fake/dead/in vehicle, injected failures/rollback, client cleanup, same-class multi-player Think and complete side-effect restoration.
+- **Related:** `SYS-PLAYER-CLASS`, class registry/runtime/payload types, character integration graph.
