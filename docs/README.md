@@ -40,6 +40,7 @@ Every claim must be labeled `Verified`, `Inferred`, `Legacy Claim`, or `Planned`
 - [`TYPE_CATALOG.md`](TYPE_CATALOG.md) — shared tables, registries, identifiers, payloads, schemas, and compatibility contracts.
 - [`modes/MODE_CATALOG.md`](modes/MODE_CATALOG.md) — core competitive and Homicide modes: IDs, inheritance, lifecycle contracts, dependencies, defects, and validation.
 - [`modes/MODE_CATALOG_TEAM_AND_PVE.md`](modes/MODE_CATALOG_TEAM_AND_PVE.md) — HL2DM, CO-OP, and Defense research with NPC, persistence, wave, and map-progression dependencies.
+- [`modes/MODE_CATALOG_ADDITIONAL.md`](modes/MODE_CATALOG_ADDITIONAL.md) — Riot, Gang Wars, Superfighters, and Slug Arena grouped by shared standalone-mode risks.
 - [`decisions/README.md`](decisions/README.md) — compact architectural decisions that must not be repeatedly rediscovered.
 
 ### Reference inventories
