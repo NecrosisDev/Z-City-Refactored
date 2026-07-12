@@ -29,16 +29,20 @@ Produce a self-contained, implementation-ready knowledgebase of the current proj
 ## Verified completed research
 
 - Project structure, bootstrap/load order, realm routing, mode registration, round lifecycle, shared system/behavior/type contracts, file-manifest boundaries, and public surfaces are documented in the linked architecture/catalog/reference files.
-- Every known top-level mode directory has a verified registry identity or explicit unresolved-file boundary:
+- Every known top-level mode directory has a verified registry identity:
   - core: `tdm`, `cstrike`, `dm`, `hmcd`, `fear`;
   - team/PvE: `hl2dm`, `coop`, `defense`, `criresp`, `pathowogen`;
   - additional: `riot`, `gwars`, `superfighters`, `scugarena`, `event`.
-- `docs/reference/MODE_FUNCTION_MATRIX.md` classifies all function/member families already verified in fetched mode source and now includes the first symbol-level executable-source batch for Homicide helpers and endpoint-adjacent functions.
-- `docs/reference/PACKET_MATRIX.md` consolidates all currently known core/admin and mode channels and now closes the Homicide assistant/death-state and role-selection endpoint family.
-- `HMCD_UpdateTraitorAssistants` and `HMCD_TraitorDeathState` have verified client receivers in `cl_hud.lua`; `HMCD(EndPlayersRoleSelection)` has a verified UI-removal reader; the bidirectional role-selection request/acknowledgement schema is paired.
-- `HMCD(SetSubRole)` is reader-only in traced loaded source and `HMCDPoliceRole` is registration-only with no located writer/receiver. They are documented as incomplete/dormant rather than assumed functional.
-- The matrices remain deliberately partial: line-precise all-mode source enumeration, Defense auxiliaries, Counter-Strike objective entities, remaining Fear endpoints and Pathowogen derma consumers are unresolved.
-- `docs/reference/PUBLIC_SURFACES.md` reflects the corrected Homicide public packet status and source blobs.
+- `docs/reference/MODE_FUNCTION_MATRIX.md` now classifies the effective callback/helper surface for the complete known registry, including inheritance, dot/colon argument behavior, direct hooks, empty overrides and internal helpers accidentally registered as hooks.
+- `docs/reference/PACKET_MATRIX.md` now records the verified core/admin and mode packet families, ordered schemas, overloaded names, mismatches, trust checks, rate/size limits, persistence crossings and one-sided endpoints.
+- Counter-Strike nested Derma readers and bomb entity endpoints are paired: `CS_Intermission`, `CS_Killfeed`, `CS_Roundover`, `bomb_look`, `bomb_enter`, and `bomb_planted`.
+- Homicide assistant/death-state and role-selection endpoints are paired; `HMCD(SetSubRole)` remains reader-only and `HMCDPoliceRole` registration-only.
+- Defense auxiliary ownership is resolved:
+  - `sv_defense_waves.lua` owns hidden spawn search, wave queues, NPC targeting and death tracking;
+  - `sv_defense_roles.lua` owns roles, equipment, commander points and wave rewards;
+  - `sv_defense_support.lua` owns support requests, commander menu/purchases, airdrops and reinforcements.
+- Defense vote/support/commander packet schemas and validation are recorded. `npc_defense_newwave` is confirmed mismatched because the client ignores the transmitted wave field.
+- The accidental duplicate network-matrix file created during concurrent continuation was removed; the canonical files remain `MODE_FUNCTION_MATRIX.md` and `PACKET_MATRIX.md`.
 
 ## High-impact verified findings
 
@@ -50,30 +54,28 @@ Produce a self-contained, implementation-ready knowledgebase of the current proj
 - Round states are `0`, `1`, `3`; stale comments/listeners use `2`.
 - Round administration contains overlapping protocols and duplicate name-keyed registrations; client-supplied tables are weakly validated.
 
-### Cross-mode matrices
+### Function and packet matrices
 
-- Repeated collision groups are explicit: `GuiltCheck`, `CanLaunch`, delayed winner callbacks, spawn override members, inheritance callbacks, and internal helpers stored on `MODE`.
-- Confirmed packet mismatches include `tdm_start`, `CS_Roundover`, `hl2dm_roundend`, `npc_defense_newwave`, and conditional `HMCD_RoundStart` roster decoding.
-- Highest-risk untrusted payloads are admin queue/list tables, TDM purchases, Fear light vectors, Crisis customization, Defense support commands, Event loot edits, and Pathowogen's complex end table.
-- Lua-table protocols lack explicit versions/count limits; entity payloads lack consistent disconnect/validity semantics; many client requests lack phase/rate/alive/role checks.
-- Fear and Pathowogen are hard-disabled for normal selection but still load function/direct-hook surfaces that require inactive-mode gating audits.
-- Homicide role-selection is structurally paired but unreachable because `ShouldStartRoleRound` hard-returns false.
-- Homicide internal helpers such as `GetActivePlayers`, `SpawnForce`, `EquipSWAT`, `EquipNationalGuard`, `StartPlayersRoleSelection`, and `SendTraitorDeathState` remain stored on `MODE` and therefore enter the automatic hook-candidate surface.
+- Internal services published as hooks include Homicide role/spawn helpers, Fear event/victim helpers, Defense wave/spawn/timer/economy helpers, CO-OP equipment helpers, Event persistence helpers and Pathowogen extraction services.
+- Confirmed packet mismatches: base `tdm_start`, `CS_Roundover`, `hl2dm_roundend`, `npc_defense_newwave`, and conditional `HMCD_RoundStart` roster decoding.
+- Highest-risk client inputs: admin queue/list tables, TDM purchases, bomb codes, Fear light vectors, Crisis customization, Defense commander purchase/support, and Event persistent loot edits.
+- Defense globally wraps `SpawnZBaseNPC`, combines per-NPC timers/nav scans/world scans, and performs broad end cleanup across unrelated NPC/addon classes.
+- Fear and Pathowogen are hard-disabled for normal selection but still load network receivers, direct hooks and function-dispatch surfaces.
+- Multiple systems listen on hook names that differ from verified core emitters: CO-OP uses `ZB_RoundStart`; Defense support uses `RoundEnd`; core emits `ZB_StartRound` and `ZB_EndRound`.
 
 ## Current bounded trace
 
-Convert the catalog-derived matrices into exact executable-source inventories and close unresolved auxiliary endpoints before moving into organism/fake-ragdoll/movement.
+Close remaining one-sided mode/core surfaces, then begin the organism/fake-ragdoll/movement/player-class ownership trace using the completed mode matrices as consumers.
 
 ### Required outputs
 
-1. Fetch every server/shared mode file and enumerate every final function-valued `MODE` assignment with definition style, exact path/blob/line, realm, expected arguments, return contract, caller, class, inheritance and duplicate status.
-2. Enumerate every loaded `util.AddNetworkString`, `net.Receive`, `net.Start`, `net.Write*` and `net.Read*`; update the packet matrix with exact source endpoints and every conditional branch.
-3. Resolve Defense auxiliary wave/support/highlight files and methods.
-4. Resolve remaining Fear assistant/light/event endpoints and inactive direct hooks.
-5. Resolve Counter-Strike bomb/hostage entities, killfeed/intermission readers and objective payloads.
-6. Resolve Pathowogen `derma/` files, end-report consumers and inactive-mode direct hooks.
-7. Trace framework consumers for `OverideSpawnPos`/spawn override, `COMMANDS`, map-point fallback, `zb.EndMatch`, round-hook names and mode cleanup.
-8. Update the two matrices and existing catalogs/reference files; do not create another branch, PR or duplicate index.
+1. Pair remaining Defense channels: `defense_highlight_last_npcs`, `defense_commander_points`, and `defense_player_role_assigned`; verify client readers and server writers.
+2. Pair core one-sided channels: `FadeScreen`, `updtime`, `ZB_SpectatePlayer`, and legacy admin queue consumers.
+3. Trace `COMMANDS` registry owner/dispatcher, spawn-override consumers (`OverrideSpawn`, `OverideSpawnPos`), map-point fallbacks, `zb.EndMatch`, and actual round hook emitters.
+4. Complete Pathowogen Derma/end-report and inactive-mode direct-hook audit.
+5. Begin organism ownership: initialization, entity/player attachment, state schema, damage/medical lifecycle, replication, fake-ragdoll integration and mode consumers.
+6. Continue immediately into fake-ragdoll, movement and player-class boundaries.
+7. Update existing matrices/catalogs/reference files only; do not create duplicate indexes, branches or PRs.
 
 ## Validation requirements
 
@@ -88,21 +90,20 @@ Convert the catalog-derived matrices into exact executable-source inventories an
 ## Risks and evidence gaps
 
 - Static source cannot prove total startup order, unsorted enumeration order, inactive-hook execution or effective duplicate overwrite behavior; temporary runtime instrumentation is required later.
-- Recursive path enumeration remains incomplete because the connector cannot reliably list directories; source discovery must continue through known paths, indexed results and fetched executable files.
-- Symbol/blob evidence has closed the first Homicide endpoint batch, but exact original source-line offsets are still required before the matrix can claim line-complete enumeration.
+- Recursive path enumeration remains incomplete because the connector cannot reliably list directories; source discovery continues through known paths, indexed results and fetched executable files.
+- Some matrix rows are symbol/blob-complete rather than original line-offset complete.
 - No dedicated-server smoke-test evidence has been captured.
 - Documented defects must not be patched until adjacent contracts and integration boundaries are mapped.
 
 ## Dependency-ordered continuation
 
-1. Resolve Defense auxiliary files and exact wave/support/highlight packet/function contracts.
-2. Resolve Counter-Strike objective entities and client readers.
-3. Resolve remaining Fear endpoints and Pathowogen derma/end-report consumers.
-4. Continue exact line enumeration for all server/shared mode files in catalog order.
-5. Complete file/realm/public-surface inventories exposed by those matrices.
-6. Trace organism, fake-ragdoll, movement and player-class systems.
-7. Continue through combat, inventory, NPC/bots, UI, persistence/security/integrations, then produce the cross-system integration and remediation packages.
+1. Close remaining one-sided mode/core channels and hook-name consumers.
+2. Trace `COMMANDS`, spawn override, points, end-match and round-hook ownership.
+3. Trace organism, fake-ragdoll, movement and player classes.
+4. Continue through combat/weapons/explosives, inventory/equipment/appearance, NPC/bots, UI/camera/spectator and persistence/admin/security/integrations.
+5. Produce the cross-system integration map, regression matrix, verified defect catalog and implementation-ready remediation packages.
+6. Begin implementation only after research defines boundaries and the user approves transition.
 
 ## Exact next action
 
-Continue on `docs/architecture-baseline`: locate and fetch Defense auxiliary wave/support/highlight files first, enumerate every function-valued `MODE` member and all network operations they define, pair `RequestSupport`, vote, wave, boss, music and last-NPC-highlight endpoints, then update `MODE_FUNCTION_MATRIX.md`, `PACKET_MATRIX.md`, the existing Defense catalog, `PUBLIC_SURFACES.md`, and this handoff. After Defense, continue directly into Counter-Strike objective entities without creating another branch or PR.
+Continue on `docs/architecture-baseline`: locate the remaining Defense channel endpoints and core one-sided channel owners, update `PACKET_MATRIX.md`/`PUBLIC_SURFACES.md`, then begin the organism initialization/state/replication trace without creating another branch or PR.
