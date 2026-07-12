@@ -1,90 +1,67 @@
 # Active Work Package
 
-> Keep this page limited to the current package. Preserve completed packages in issues, pull requests, or decision records rather than accumulating history here.
+> This file contains only the current package and immediate continuation state. Completed detail belongs in commits, pull requests, issues, catalogs, tests, or decision records.
 
 ## Identity
 
 - **ID:** `WP-DOCS-001`
-- **Title:** Establish repository-local agent knowledge and regression contract
+- **Title:** Establish repository-local agent memory, knowledge, and regression contract
 - **Branch:** `chore/agent-knowledge-contract`
-- **Owner/agent:** OpenAI agent
+- **Pull request:** `#2` (draft)
 - **Status:** `validation`
+- **Knowledge state:** `Verified` for repository changes; no gameplay claims added
 
 ## Desired outcome
 
-Provide a small, durable operating contract that lets future agents resume work from verified repository evidence, keep implementation scope explicit, and leave a reproducible handoff without introducing runtime dependencies.
+Ensure every future agent begins each session with the same cumulative operating rules, current work state, evidence hierarchy, implementation depth, regression standard, and continuation requirement without depending on conversation history.
 
-## Creative and product constraints
+## Non-negotiable constraints
 
-- Documentation must remain concise enough to read at the start of every work session.
-- Executable code and reproducible runtime evidence outrank inherited documentation and comments.
-- The contract must not prescribe gameplay design that has not been verified or approved.
-- The structure must work with ordinary Git and Markdown; no generator, service, hook, or external knowledge system is required.
+- `AGENTS.md` is the singular source of truth for agent behavior.
+- Explicit user corrections are cumulative and may not silently weaken unrelated established rules.
+- Agents never commit directly to `main` and do not merge without explicit authorization.
+- Chat output is limited to TL;DR summaries of no more than two sentences; durable detail belongs in the repository.
+- Individual packages remain safely bounded, but work continues through dependency-ordered packages until full system integration.
+- Work is not complete at document, edit, commit, branch, pull-request, or local-package completion.
+- Documentation must be handoff-complete enough to minimize rediscovery, design inference, and token usage.
+- Every active session ends with a repository handoff and an arranged automated continuation unless genuinely blocked or fully integrated.
+- Prevent regression and information loss using the smallest authoritative mechanisms; do not add process or runtime bloat.
 
-## Scope
+## Scope completed
 
-### Included
-
-- Root agent operating rules.
-- Canonical documentation index.
-- Active work-package handoff format.
-- System, behavior, and shared-type catalog templates.
-- Architectural decision-record template.
-- Pull-request regression and handoff checklist.
-- Validation of branch scope and runtime non-impact.
-
-### Excluded
-
-- Runtime Lua changes.
-- Claims about existing gameplay systems not traced from executable code.
-- Full population of catalogs.
-- Automated documentation generation or CI enforcement.
-- Moving documentation to GitHub Wiki.
-
-## Verified current behavior
-
-- Pull request `#2` targets `main` from `chore/agent-knowledge-contract` and remains a draft.
-- Before this update, the branch was eight commits ahead of `main`, zero commits behind, and changed only eight Markdown files.
-- The branch introduces no Lua, asset, networking, hook, load-order, or configuration changes.
-- Catalogs intentionally contain no project claims until executable code or reproducible runtime evidence is traced.
-
-## Decisions
-
-| Decision | Reason | Evidence/record |
-|---|---|---|
-| Keep canonical working documentation in the repository | Branches, reviews, and code changes must version documentation atomically; Wiki history cannot enforce that relationship | `AGENTS.md`, `docs/INDEX.md`, PR `#2` |
-| Use stable IDs for systems, behaviors, types, and work packages | Agents need compact cross-references that survive file movement and implementation refactors | Catalog templates and PR template |
-| Treat inherited documentation and comments as claims | Prevents stale notes from overriding executable behavior | `AGENTS.md`, `docs/INDEX.md` authority order |
-| Avoid tooling or runtime dependencies | The first contract should reduce coordination cost without increasing build, server, or maintenance risk | Branch diff and PR scope |
-
-## Changes completed
-
-- Added `AGENTS.md` with required workflow and definition of done.
-- Added `docs/INDEX.md` as the canonical documentation entry point.
-- Added templates for system, behavior, and shared-type catalogs.
-- Added the active work-package handoff format.
-- Added lightweight architectural decision records.
-- Added a pull-request regression and handoff checklist.
-- Replaced the unassigned work-package template state with this active package record.
+- Consolidated all established workflow corrections and clarifications into root `AGENTS.md`.
+- Added contract-integrity rules preventing silent drift, weakening, or replacement.
+- Added mandatory per-session startup and repository inspection sequence.
+- Defined repository, branch, commit, merge, and chat-output rules.
+- Defined evidence authority and confidence labels: `Verified`, `Inferred`, `Legacy Claim`, and `Planned`.
+- Defined handoff-complete implementation documentation requirements.
+- Defined regression review surfaces and anti-bloat constraints.
+- Defined continuation behavior and full-system-integration completion criteria.
+- Updated `docs/INDEX.md` to require agents to read `AGENTS.md` first.
+- Retained compact system, behavior, type, decision, work-package, and pull-request mechanisms as supporting records.
 
 ## Validation
 
 | Check | Result | Evidence |
 |---|---|---|
-| Branch is based on current `main` | Pass | Comparison before this update: 0 commits behind |
-| Changes are documentation/process only | Pass | PR `#2` changed-file list contains only Markdown files |
-| Runtime behavior changed | No | No Lua, assets, hooks, net messages, convars, or load-order files changed |
-| Catalog claims are evidence-gated | Pass | Each catalog begins empty and requires paths, symbols, validation, commit, and date |
-| Handoff has an executable next action | Pass | See next section |
-| Runtime smoke test | Not applicable | No executable files changed |
+| Canonical rules are repository-local | Pass | Root `AGENTS.md` |
+| Every session has an explicit startup sequence | Pass | `AGENTS.md` and `docs/INDEX.md` |
+| Conversation history is not required | Pass | Contract requires repository-complete handoff |
+| Contract drift has a defined failure response | Pass | `AGENTS.md` contract-integrity section |
+| Main branch modified | No | All changes remain on `chore/agent-knowledge-contract` |
+| Runtime behavior modified | No | Markdown-only branch |
+| Process/tooling bloat introduced | No | No service, hook, generator, CI, runtime dependency, or duplicate registry |
+| Gameplay claims introduced | No | Catalogs remain evidence-gated templates |
 
-## Risks and unresolved questions
+## Risks and blockers
 
-- The contract remains advisory until reviewers consistently require it or later CI checks are deliberately added.
-- Stable ID naming conventions may need refinement after the first real system-tracing package.
-- Catalog templates may be too broad or too narrow; adjust only from observed use, not speculation.
-- The repository currently has no verified subsystem catalog entries, so future work still requires initial code tracing.
+- The contract cannot govern agents operating from `main` until PR `#2` is reviewed and merged by an authorized user.
+- Repository rules are advisory unless the agent follows startup instructions; later CI enforcement should be added only after a demonstrated compliance failure justifies it.
+- The first real tracing package must test whether catalog templates provide sufficient detail without duplication.
 
-## Next concrete action
+## Exact continuation action
 
-After this pull request is reviewed and merged, create a focused branch for `WP-TRACE-001` and trace the repository bootstrap/load order from executable Lua. Populate the first `SYS-*` entries with exact paths, realms, include/autorun order, public hooks, dependencies, and a reproducible server-start validation procedure. Do not document gameplay intent during that package unless runtime evidence verifies it.
+1. Finish aligning the pull-request checklist and PR `#2` description with the consolidated contract.
+2. Re-compare the branch against `main` and verify all changes are Markdown-only and internally consistent.
+3. Leave PR `#2` as a draft for user review; do not merge.
+4. After authorized merge, branch from updated `main` for `WP-TRACE-001` and trace executable Lua bootstrap/load order, populating the first verified system entries with exact paths, realms, include order, hooks, dependencies, failure modes, and reproducible startup validation.
