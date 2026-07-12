@@ -36,52 +36,63 @@ Stable system IDs are cross-references for architecture documents, behaviors, ty
 
 ## `SYS-MODE-REGISTRY` — Mode discovery, inheritance, persistence, and hook dispatch
 
-- **Status:** `partial` — registry implementation verified; complete mode inventory and runtime dispatch validation pending.
+- **Status:** `partial` — registry implementation verified; runtime dispatch instrumentation pending.
 - **Purpose:** Discovers mode files/folders, builds `MODE` tables, applies base inheritance, preserves hotload state, registers mode functions as hooks, and persists configurable mode chances.
 - **Primary paths/symbols:** `gamemodes/zcity/gamemode/loader.lua`; `zb.modes`, `zb.modesHooks`, global temporary `MODE`; local `addModeHook`, `InitMode`, `LoadModes`.
 - **Realm:** Registry and dispatch tables exist on both realms; chance persistence and admin commands are server-only.
 - **Initialization/load order:** Libraries load first. Top-level mode files are processed before mode folders. Each candidate sets global `MODE = {}`, includes source, finalizes, stores by `MODE.name`, then clears `MODE`. Base lookup uses the already-populated `zb.modes[MODE.base]`.
-- **Public surface:** `zb.modes`, `zb.modesHooks`; dynamically registered Garry's Mod hooks named by every function key on every mode; admin commands `zb_getmodeschances`, `zb_setmodechance`, `zb_savemodeschances`; data file `data/zbattle/modeschances.json`.
-- **Dispatch contract:** One hook callback per hook name resolves `zb.CROUND_MAIN`, then `zb.CROUND`, then `tdm`; it invokes the selected mode function with the mode table as first argument and forwards up to six return values only when the first is non-`nil`.
-- **Inheritance contract:** `table.Inherit(MODE, zb.modes[MODE.base])`, then table-valued members are copied and optional `MODE:AfterBaseInheritance()` runs. Existing `zb.modes[name].saved` survives hotload.
-- **Dependencies:** `SYS-BOOTSTRAP-GAMEMODE`, `zb` namespace, mode filename ordering, mode methods such as `SetupChances`.
-- **Data ownership:** Each realm owns its registry; server owns `zb.ModesChances` and JSON persistence.
-- **Known failure modes/risks:** missing/unregistered base can break inheritance or nested-table access; unsorted mode discovery makes inheritance order implicit; every function on `MODE` is treated as a hook candidate, conflating helpers/lifecycle methods/engine hooks; local `tbl2` is assigned without `local`; duplicate hook identifier `zb_modehook_<hookName>` means all modes share one dispatcher per hook name by design; malformed or partial mode tables may be silently skipped only when completely empty.
-- **Validation:** Build a complete mode dependency graph, classify every function key, verify base-before-child order, hotload preservation, chance persistence, and one representative hook return path on server and client.
-- **Related:** `BEH-MODE-DISPATCH`, `TYPE-MODE-REGISTRY`, `TYPE-MODE-TABLE`.
-- **Evidence:** `gamemodes/zcity/gamemode/loader.lua` blob `b1754dff2d53012a05cb109f26b75eae118b14ce`; reviewed 2026-07-12.
+- **Public surface:** `zb.modes`, `zb.modesHooks`; dynamically registered hooks named by every function key; mode chance commands and `data/zbattle/modeschances.json`.
+- **Dispatch contract:** One hook callback per hook name resolves `zb.CROUND_MAIN`, then `zb.CROUND`, then `tdm`; selected function receives the mode table as first argument and forwards up to six returns only when the first is non-`nil`.
+- **Inheritance contract:** `table.Inherit(MODE, zb.modes[MODE.base])`, nested table copies, optional `AfterBaseInheritance`; `saved` state survives hotload.
+- **Known failure modes/risks:** unsorted base/child discovery; every function becomes a hook candidate; dot-defined argument shift; empty override/inherited surface; disabled modes still register callbacks; duplicate hook identifier per function name by design.
+- **Validation:** runtime registration order, server/client parity, callback arguments/returns, hotload and external hook-name emissions.
+- **Related:** `BEH-MODE-DISPATCH`, `TYPE-MODE-REGISTRY`, `TYPE-MODE-TABLE`, `reference/MODE_FUNCTION_MATRIX.md`.
+- **Evidence:** `loader.lua` blob `b1754dff2d53012a05cb109f26b75eae118b14ce`; reviewed 2026-07-12.
 
 ## `SYS-ROUND-LIFECYCLE` — Server-authoritative round state, selection, and client synchronization
 
-- **Status:** `partial` — server/client source path verified; full mode interactions and runtime cycle pending.
-- **Purpose:** Resolves current/next modes, progresses pre-round/active/end states, evaluates winners/timeouts, resets players, selects future modes, synchronizes clients/admin tools, and dispatches round lifecycle callbacks.
-- **Primary paths/symbols:** server `gamemodes/zcity/gamemode/libraries/sv_roundsystem.lua`; client `gamemodes/zcity/gamemode/cl_init.lua`; globals/functions `CurrentRound`, `NextRound`; `zb:PreRound`, `zb:RoundThink`, `zb:EndRoundThink`, `zb:RoundStart`, `zb:EndRound`, selection/queue APIs.
-- **Realm:** Server authoritative; clients mirror current mode/state/time and invoke client-side mode callbacks.
-- **State contract:** `0` pre-round/intermission, `1` active, `3` end period. Client comment claiming state `2` is legacy/mismatched; executable server and client branches use `3`.
-- **Tick/lifecycle order:** Server `Think` hook throttles to one execution per second and calls `PreRound`, `RoundThink`, then `EndRoundThink`. State `0` schedules/starts; `RoundStart` sets `1`; end criteria call `EndRound` which sets `3`; end timer returns to `0`, resets players/equipment, and prepares the next mode.
-- **Mode resolution/selection:** `CurrentRound` defaults to `hmcd` or forces `coop` when a `trigger_changelevel` exists; submode names resolve through `mode.Types`; available modes require `CanLaunch` and map-size conditions; weighted selection builds a 20-item `zb.RoundList`; convar `zb_forcemode` may override next selection.
-- **Public surface:** `zb.ROUND_STATE`, `zb.CROUND`, `zb.CROUND_MAIN`, `zb.nextround`, `zb.RoundList`, `zb.QueuedModes`, `zb.ModesPlaytime`; hooks `ZB_PreRoundStart`, `ZB_StartRound`, `ZB_EndRound`, `TTTPrepareRound`; convar `zb_forcemode`; admin commands including `zb_checkchances` and `zb_rerollchances`; persistence `data/zbattle/mapsizes.json` plus mode chances owned by `SYS-MODE-REGISTRY`.
-- **Network surface verified in traced sections:** `FadeScreen`, `RoundInfo`, `ZB_SendModesInfo`, `ZB_SendRoundList`, `ZB_RequestRoundList`, `ZB_UpdateRoundList`, `ZB_NotifyRoundListChange`, `SendAvailableModes`, `AdminSetGameMode`, `AdminEndRound`, `SendGameQueue`, `AdminSetGameQueue`, plus time sync `updtime` consumed by the client.
-- **Data ownership/trust:** Server writes round state/mode and broadcasts `RoundInfo` (`mode.name`, signed 4-bit state). Client stores `zb.CROUND`/`zb.ROUND_STATE`, emits `RoundInfoCalled`, and invokes local `RoundStart` or `EndRound`. Admin-originating receivers check `ply:IsAdmin`; `ZB_UpdateRoundList` accepts a decoded table without shape validation and reads `forceUpdate` without using it in the traced body.
-- **Dependencies:** `SYS-MODE-REGISTRY`, player reset/class/organism/fake-ragdoll APIs, map points/size, achievements, round-time sync, admin enumeration/UI, optional vFire state.
-- **Known failure modes/risks:** state comment drift; mode callback availability assumed at multiple call sites; one-second lifecycle cadence; network table payload lacks explicit schema validation; static source cannot prove global hook ordering; many external subsystem calls make round transitions a high-risk integration boundary.
-- **Validation:** Dedicated-server cycle covering `0 -> 1 -> 3 -> 0`, late join synchronization, forced/random/queued selection, submode resolution, end timeout, changelevel/coop path, player reset, client callbacks, malformed/unauthorized admin messages, and persistence reload.
-- **Related:** `BEH-ROUND-CYCLE`, `BEH-MODE-SELECTION`, `TYPE-ROUND-STATE`, `TYPE-ROUNDINFO-PAYLOAD`, `TYPE-MODE-TABLE`.
-- **Evidence:** `sv_roundsystem.lua` blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`; `cl_init.lua` blob `fa61811ef802529d54abe2cf1cc72a936ba15590`; reviewed 2026-07-12.
+- **Status:** `partial` — server/client source path verified; full integrated cycle pending.
+- **Purpose:** Resolves current/next modes, progresses pre-round/active/end states, evaluates winners/timeouts, resets players, selects future modes, synchronizes clients/admin tools, and dispatches lifecycle callbacks.
+- **Primary paths/symbols:** `sv_roundsystem.lua`, client `cl_init.lua`; `CurrentRound`, `NextRound`, `zb:PreRound`, `RoundThink`, `EndRoundThink`, `RoundStart`, `EndRound`.
+- **Realm/state:** Server authoritative; client mirror. Verified states `0` pre-round, `1` active, `3` end; state-2 comments/listeners are stale.
+- **Tick/lifecycle:** server Think once/second; `0 -> 1 -> 3 -> 0`; reset/equipment/intermission work spans many subsystems.
+- **Public surface:** round globals, `ZB_PreRoundStart`, `ZB_StartRound`, `ZB_EndRound`, `TTTPrepareRound`, force/queue/admin packets, time/spectator synchronization and map-size persistence.
+- **Dependencies:** mode registry, player reset/class/organism/fake, map points, achievements, admin UI and optional integrations.
+- **Known failure modes/risks:** overlapping queue protocols/lists; unvalidated admin tables; mode callbacks assumed; one-second cadence; stale hook names; spawn/get-up interactions through `OverrideSpawn`.
+- **Validation:** dedicated full cycle, late joins, selection, admin end, CO-OP/changelevel, reset/equipment, malformed admin transport and persistence reload.
+- **Related:** `BEH-ROUND-CYCLE`, `BEH-MODE-SELECTION`, `TYPE-ROUND-STATE`, `TYPE-ROUNDINFO-PAYLOAD`, `TYPE-ROUND-QUEUE`.
+- **Evidence:** server blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`; client blob `fa61811ef802529d54abe2cf1cc72a936ba15590`; reviewed 2026-07-12.
 
 ## `SYS-ORGANISM` — Physiological state, organ geometry, damage and replication
 
 - **Status:** `partial` — authoritative ownership, state, module order, damage path and primary replication are source-verified; every medical/item/client consumer and runtime cost remain incomplete.
-- **Purpose:** Attaches a mutable physiological state to players, NPCs and ragdolls; simulates blood, pain, pulse, lungs, stamina, metabolism, organs, limbs and consciousness; resolves custom organ penetration and wounds; drives fake/unconscious/death state; synchronizes clients.
-- **Primary paths/symbols:** `lua/homigrad/organism/tier_0/*`, `tier_1/sv_organism.lua`, `tier_1/sv_input.lua`, `tier_1/modules/*`, `tier_1/modules_input/*`, `tier_1/cl_statistics.lua`, `tier_1/cl_main.lua`, `organism/sv_brainfuck.lua`; `hg.organism`, `hg.organism.list`, `hg.organism.module`, `hg.organism.input_list`.
-- **Realm:** Server authoritative physiology/damage; shared organ geometry; client snapshot/interpolation/presentation.
-- **Ownership contract:** One mutable organism table is attached to an entity and can be shared by player, fake ragdoll and death ragdoll. `owner` is current authoritative entity and `ownerX` preserves identity/origin. Transfers and delayed callbacks must preserve this invariant.
-- **Tick contract:** Tier 0 emits `Org Think` at approximately 10 Hz. Core module order is stamina, lungs, liver, blood, pain, metabolism, random events, pulse, followed by other same-hook consumers such as virus and brain-spasm code. Execution order materially changes gameplay values.
-- **Damage contract:** `EntityTakeDamage/homigrad-damage` derives weapon/bullet penetration and custom OBB intersections, calls organ/bone/artery handlers, creates wounds, mutates physiology, emits project damage hooks, applies physical/effect output and heavily scales ordinary engine damage. Collision damage enters through separate ragdoll/player physics hooks.
-- **Replication contract:** `organism_send` writes a Lua-table snapshot plus four branch booleans. Owner snapshots are roughly one second; PVS snapshots one to three seconds depending on organism type; partial merge packets and wound NetVars overlap the same authority. Developer mode can send the entire organism table.
-- **Public surface:** hooks `Org Add`, `Org Clear`, `Org Think`, `Org Transfer`, `Org Think Call`, `HG_OnOtrub`, `HG_OnWakeOtrub`, `Should Fake Up`, `PreHomigradDamage`, `PreHomigradDamageBulletBleedAdd`, `HomigradDamage`, `OnAmputateLimb`, `Ragdoll Collide`, `RagdollDeath`; APIs documented in `architecture/ORGANISM_SYSTEM.md`; commands `hg_fixdislocation`, breath commands; convars for unreliable nets, developer detail, stamina, hunger and presentation.
-- **Dependencies:** global loader order, ValveBiped model/bone conventions, fake-ragdoll ownership, physical bullets/weapons, armor, inventory, medical items, player classes, modes, NetVars and UI/effects.
-- **Known failure modes/risks:** unsorted Tier 0/Tier 1 load assumption; implicit duplicated schema; mutable player/ragdoll table aliasing; order-dependent physiology; monolithic damage hook; global penetration overrides; nil/uninitialized pre-damage hook fields; inconsistent entity/bone/armor guards; overlapping snapshots/NetVars; unversioned Lua tables; client owner validation after method access; fixed-cadence bandwidth/CPU scaling; dormant `organism_sendply` and readerless `VirusStageUpdate`; model-dependent missing organs; division-by-zero and extreme-value paths.
-- **Validation:** startup order instrumentation; canonical reset-schema assertion; deterministic module-order tests; player/NPC/fake/death ownership transitions; every damage type/model/armor combination; penetration/reentrancy/collision/amputation; packet bit/size/cadence capture; private/public field exposure; population performance budgets.
-- **Related:** `architecture/ORGANISM_SYSTEM.md`; future `SYS-FAKE-RAGDOLL`, `SYS-MOVEMENT`, `SYS-PLAYER-CLASS`; `TYPE-ORGANISM-STATE`, `TYPE-ORGANISM-SNAPSHOT`; `BEH-ORGANISM-LIFECYCLE`.
-- **Evidence:** Tier 0 blob `1b8a72186b295f3542dd90d92374d5985d7d6e62`; Tier 1 core blob `4830503722f005d27373047d8db5c58d4e217559`; damage blob `cce5ff506e9799eb3c1e104ea3146927a8936326`; client snapshot blob `c3c5db65d44125a2acf5df4be1b6fe13d891a86f`; reviewed 2026-07-12.
+- **Purpose:** Attaches mutable physiology to players, NPCs and ragdolls; simulates blood, pain, pulse, lungs, stamina, metabolism, organs, limbs and consciousness; resolves penetration/wounds; drives fake/unconscious/death state; synchronizes clients.
+- **Primary paths/symbols:** `organism/tier_0/*`, `tier_1/sv_organism.lua`, `sv_input.lua`, `modules/*`, `modules_input/*`, `cl_statistics.lua`, `cl_main.lua`, `sv_brainfuck.lua`; `hg.organism`, registries/modules/inputs.
+- **Realm:** Server authoritative physiology/damage; shared geometry; client snapshots/interpolation/effects.
+- **Ownership:** one mutable table may be shared by player, fake ragdoll and death ragdoll; `owner` changes and `ownerX` preserves identity.
+- **Tick:** Tier 0 emits ~10 Hz `Org Think`; core order stamina, lungs, liver, blood, pain, metabolism, random events, pulse, then additional hook consumers.
+- **Damage:** monolithic `EntityTakeDamage/homigrad-damage` handles bullet/armor/OBB/organ/wound/effects/physics/replication; collisions enter separate hooks.
+- **Replication:** `organism_send` unversioned Lua table + four booleans; owner/PVS/partial/developer variants plus wound NetVars.
+- **Public surface:** organism lifecycle/damage/amputation/ragdoll hooks; geometry/damage/replication APIs; dislocation/breath commands.
+- **Known failure modes/risks:** load-order assumption; implicit schema; shared-table aliasing; order-dependent modules; global penetration overrides; nil trace/entity assumptions; overlapping transport; client owner dereference before validity; fixed-cadence CPU/bandwidth; model assumptions/extreme values.
+- **Validation:** startup/schema, deterministic simulation, owner transitions, damage/model/armor/penetration/collision/amputation, packet cost/privacy and population budgets.
+- **Related:** `architecture/ORGANISM_SYSTEM.md`, `SYS-FAKE-RAGDOLL`, future `SYS-MOVEMENT`, `SYS-PLAYER-CLASS`; organism types/behavior.
+- **Evidence:** Tier 0 `1b8a72186b295f3542dd90d92374d5985d7d6e62`; core `4830503722f005d27373047d8db5c58d4e217559`; damage `cce5ff506e9799eb3c1e104ea3146927a8936326`; client snapshot `c3c5db65d44125a2acf5df4be1b6fe13d891a86f`; reviewed 2026-07-12.
+
+## `SYS-FAKE-RAGDOLL` — Living-body replacement, active physics control, death and get-up
+
+- **Status:** `partial` — core creation, ownership, controls, networking, camera/render, death and get-up are source-verified; every weapon/vehicle/class integration and runtime performance remain incomplete.
+- **Purpose:** Replaces the visible/colliding living player with a custom controllable physical ragdoll while preserving identity, organism, appearance, equipment, camera, NPC targeting, vehicle state and death-body continuity.
+- **Primary paths/symbols:** `lua/homigrad/fake/sv_tier_0.lua`, `sv_control.lua`, `sv_input.lua`, `cl_fake.lua`, `sh_render.lua`; `hg.Ragdoll_Create`, `hg.Fake`, `hg.FakeUp`, `hg.GetCurrentCharacter`, `hg.RagdollOwner`, `hg.ragdollFake`, NWEntities and lifecycle hooks.
+- **Realm:** Server authoritative body creation/physics/transition; client reconstructs ownership through NWVar proxies, controls camera/render and smooth get-up.
+- **Ownership contract:** server fields/maps, NWEntity `FakeRagdoll`/`RagdollDeath`, custom `Player Ragdoll` packet/index, client proxy state and shared organism table must all refer to one current body generation.
+- **Entry/death:** custom `prop_ragdoll`, appearance/pose/physics/bullseye/PVS/vehicle setup; player hidden/noninteractive; death reuses body and suppresses engine ragdoll.
+- **Get-up:** validates state/velocity/stun/space, emits hooks, sets global/network spawn override, respawns player, restores partial state, removes body and restores rendering/collision/movement.
+- **Control:** per-frame all-player Think drives physics bodies, crawling, grabbing, choking, weapon callbacks, use/pickup, stamina, pain, fire and player position from organism/input state.
+- **Replication:** `Player Ragdoll` writes player + body/null but client depends on undefined external `net.ReadEntity2()` dual return; actual ownership primarily follows NWEntity proxies. `Override Spawn` coordinates get-up spawn suppression.
+- **Public surface:** `Ragdoll_Create`, `Fake`, `Fake Up`, `Should Fake Up`, `CanControlFake`, `RagdollEntityCreated`, `RagdollRemove`, `Ragdoll Collide`, decal/prediction/collision hooks; fake/control/render APIs; fake/force_fake commands and camera/control convars.
+- **Dependencies:** organism, movement, player classes, weapons, appearance/armor/gore, NPC relationships, vehicles/Glide/simfphys, round spawn, spectator/camera and fire integrations.
+- **Known failure modes/risks:** overlapping ownership channels without generation; no transactional rollback; respawn-based get-up/global `OverrideSpawn`; undefined `ReadEntity2`; partial body/bullseye creation; hard-coded ValveBiped physics map; per-frame multi-body cost; invalid physics/bone/weapon assumptions; inverted/ambiguous hook semantics; stale timers/constraints; vehicle core branching; client camera/render global leaks; disconnect organism API misuse.
+- **Validation:** lifecycle failure injection, owner-generation assertions, packet/NW order/PVS/late join, model/physics compatibility, per-frame scale tests, grabbing/choking/combat/fire, get-up spawn preservation, vehicle adapters and camera/render restoration.
+- **Related:** `architecture/FAKE_RAGDOLL_SYSTEM.md`, `SYS-ORGANISM`, future `SYS-MOVEMENT`, `SYS-PLAYER-CLASS`; fake state/payload types and behavior.
+- **Evidence:** server Tier 0 blob `0fa522db3f0562eaf1816d6452fa082aef81d2bb`; control blob `22c87ad4148716ff1173c104e7df943043b09ce5`; input blob `545f7b292c6bdb4610766700251cc741072a5e2e`; client blob `bdd7e6a215da568a2070bd9b33e29244f1970f90`; render blob `ddf5584d6ab0e51fdbb8fa802e87a40ec2c80ffe`; reviewed 2026-07-12.
