@@ -28,13 +28,13 @@ Externally observable behavior is recorded independently from implementation str
 
 ## `BEH-MODE-DISPATCH` — Current mode functions are dispatched through shared hook callbacks
 
-- **Status:** `partial` — dispatch implementation verified; complete function classification and runtime hook coverage pending.
+- **Status:** `partial` — dispatch implementation and known-mode function matrix verified; runtime external hook coverage pending.
 - **Actors/context:** Any server/client engine or project hook whose name matches a function key stored on a registered mode.
 - **Trigger:** `InitMode` iterates mode functions and calls `addModeHook`; later `hook.Run` invokes the registered dispatcher.
 - **Observable result:** Dispatcher selects `zb.CROUND_MAIN`, then `zb.CROUND`, then `tdm`; it invokes the selected function with its mode table as first argument. Up to six values are returned only when the first return value is non-`nil`.
-- **Edge cases:** All function-valued mode members are registered as hook candidates, including possible helpers and lifecycle methods; missing current mode/hook is ignored; multiple modes share one dispatcher identifier per hook name; base-mode registration order affects inherited functions.
-- **Implementation evidence:** `gamemodes/zcity/gamemode/loader.lua`: `addModeHook`, `InitMode`, `zb.modesHooks`, `zb.modes`.
-- **Regression procedure:** For representative engine hooks, verify selected mode, arguments, `self`, nil/non-nil return forwarding, fallback to `tdm`, hotload behavior, and that internal helper names do not accidentally collide with emitted hooks.
+- **Edge cases:** All function-valued mode members are registered, including internal helpers; dot-defined functions receive shifted arguments; empty callbacks can suppress inherited behavior; disabled modes still publish callbacks; multiple modes share one dispatcher identifier per hook name.
+- **Implementation evidence:** `gamemodes/zcity/gamemode/loader.lua`; `reference/MODE_FUNCTION_MATRIX.md`.
+- **Regression procedure:** Verify selected mode, realm, arguments, `self`, nil/non-nil return forwarding, fallback to `tdm`, inheritance, hotload and accidental helper-name emissions.
 - **Related:** `SYS-MODE-REGISTRY`, `TYPE-MODE-TABLE`, `TYPE-MODE-REGISTRY`.
 - **Last verified:** source blob `b1754dff2d53012a05cb109f26b75eae118b14ce`, 2026-07-12.
 
@@ -44,9 +44,9 @@ Externally observable behavior is recorded independently from implementation str
 - **Actors/context:** Server round manager, registered modes, administrators, and admin UI clients.
 - **Trigger:** Empty `zb.RoundList`, explicit reroll/set/queue request, round start, map-size change, force-mode change, or admin request.
 - **Observable result:** Available modes pass `CanLaunch` and map-size rules; weighted selection fills 20 future entries, removes the first into `zb.nextround`, and may be overridden by `zb_forcemode` or admin actions. Admin clients receive modes, list, next mode, and force-mode state.
-- **Edge cases:** Weight calculation multiplies chances by 100 and passes the total to `math.random`; empty/invalid mode sets need runtime validation; `RandomPairs` affects traversal; `forceUpdate` is read from `ZB_UpdateRoundList` but unused in the traced receiver; incoming list table has no explicit shape validation beyond admin authorization.
-- **Implementation evidence:** `sv_roundsystem.lua`: `GetAvailableModes`, `GetChance`, `GetModesChances`, `WeightedChanceMode`, `RerollChances`, `SetRoundList`, admin net receivers and commands; `loader.lua` chance persistence.
-- **Regression procedure:** Seed deterministic test chances, run large selection sample, verify eligibility filtering, queue order, force-mode override/reset, submode selection, persistence reload, unauthorized rejection, malformed admin payload handling, and client synchronization.
+- **Edge cases:** Empty/invalid mode sets, unsorted/random traversal, overlapping admin protocols and unvalidated incoming queue tables require runtime/fuzz validation.
+- **Implementation evidence:** `sv_roundsystem.lua`, `loader.lua`, packet/mode matrices.
+- **Regression procedure:** Seed deterministic chances, verify eligibility/queue/force behavior, persistence reload, malformed/unauthorized admin input and all-client synchronization.
 - **Related:** `SYS-MODE-REGISTRY`, `SYS-ROUND-LIFECYCLE`, `TYPE-ROUND-QUEUE`, `TYPE-MODE-TABLE`.
 - **Last verified:** `sv_roundsystem.lua` blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`, 2026-07-12.
 
@@ -56,9 +56,23 @@ Externally observable behavior is recorded independently from implementation str
 - **Actors/context:** Dedicated server, all connected players, current mode, clients, and dependent reset/equipment systems.
 - **Trigger:** Server `Think` hook once per second; timers, mode end criteria, admin end request, or pre-round start deadline.
 - **Observable result:** State `0` schedules and starts a round; `RoundStart` sets state `1`, broadcasts `RoundInfo`, calls mode start callbacks, and chooses the next mode; end criteria set state `3`, call end callbacks, emit hooks/fade, and start an end timer; expiry returns to `0`, broadcasts state, resets players, and runs intermission/equipment preparation. Late joiners receive current `RoundInfo`.
-- **Client result:** Client stores the broadcast mode and signed 4-bit state, emits `RoundInfoCalled`, and calls local mode `RoundStart` for `1` or `EndRound` for `3`; state `0` activates fade handling.
-- **Edge cases:** Client comment incorrectly names `2` as end state; current mode defaults to `hmcd` and changelevel maps force `coop`; multiple external subsystem calls can abort transitions; lifecycle polling is one-second cadence; client callbacks repeat server-named methods in a separate realm and must remain side-safe.
-- **Implementation evidence:** server `sv_roundsystem.lua`: `CurrentRound`, `PreRound`, `RoundStart`, `RoundThink`, `ShouldRoundEnd`, `EndRound`, `EndRoundThink`, `Think`; client `cl_init.lua`: `RoundInfo` receiver.
-- **Regression procedure:** Capture a dedicated-server trace for `0 -> 1 -> 3 -> 0`, including one late join, one disconnect, forced and random modes, timeout and mode-defined end, coop changelevel path, player reset/equipment calls, client callback counts, and network payload values.
+- **Client result:** Client stores the mode/state, emits `RoundInfoCalled`, and invokes local mode lifecycle callbacks.
+- **Edge cases:** Stale state-2 comments/listeners, changelevel-forced CO-OP, external subsystem failures, one-second cadence and realm-separated same-name callbacks.
+- **Implementation evidence:** server `sv_roundsystem.lua`; client `cl_init.lua`.
+- **Regression procedure:** Dedicated trace for `0 -> 1 -> 3 -> 0`, late join/disconnect, forced/random modes, timeout/mode end, CO-OP transition, reset/equipment calls and packet values.
 - **Related:** `SYS-ROUND-LIFECYCLE`, `TYPE-ROUND-STATE`, `TYPE-ROUNDINFO-PAYLOAD`, `TYPE-MODE-TABLE`.
 - **Last verified:** server blob `324491c8ad470d0aae1c24b768b9dc607b38c4e7`; client blob `fa61811ef802529d54abe2cf1cc72a936ba15590`; 2026-07-12.
+
+## `BEH-ORGANISM-LIFECYCLE` — Physiological state follows the character through injury, fake ragdoll, unconsciousness and death
+
+- **Status:** `partial` — source behavior verified; deterministic/runtime integration and every medical consumer remain pending.
+- **Actors/context:** Living players, supported NPCs, fake ragdolls, death ragdolls, damage sources, modes/classes, medical systems and observing clients.
+- **Trigger:** Initial spawn, organism clear/transfer, the global 10 Hz organism loop, damage/collision, fake/get-up, medical mutation, death or entity removal.
+- **Observable result:** A mutable organism table is attached and reset; modules update stamina, breathing, blood, pain, metabolism, random events and pulse in fixed order; custom organ hitboxes translate damage into wounds/organ/bone state; physiology determines movement, unconsciousness, fake-ragdoll use and death; clients receive interpolated snapshots and effects.
+- **Ownership result:** Player, fake ragdoll and death ragdoll can share the same organism table while `owner` changes. Damage to a faking player is redirected to the ragdoll, and get-up/death preserve physiological state rather than creating a clean copy.
+- **Network result:** Owner and nearby observer snapshots use `organism_send` with a Lua table plus branch booleans; partial merges and wound NetVars update overlapping parts of the state.
+- **Edge cases:** Unsorted Tier 0/Tier 1 load assumption; shared-table aliasing; module/hook order overwrites; unsupported models/missing bones; global penetration overrides; invalid attacker/inflictor/armor state; extreme/NaN/infinite physiology; delayed callbacks after ownership transfer; unversioned/high-frequency replication; client owner dereference before validity check.
+- **Implementation evidence:** `organism/tier_0/*`, `tier_1/sv_organism.lua`, `tier_1/sv_input.lua`, `tier_1/modules/*`, `tier_1/modules_input/*`, `tier_1/cl_statistics.lua`, `organism/sv_brainfuck.lua`; `architecture/ORGANISM_SYSTEM.md`.
+- **Regression procedure:** Record startup order and default schema; exercise player/NPC/fake/death ownership transitions; deterministic module-order fixtures; every damage type/model/armor path; collision/penetration/amputation; packet size/cadence/public-private exposure across population levels.
+- **Related:** `SYS-ORGANISM`, `TYPE-ORGANISM-STATE`, `TYPE-ORGANISM-SNAPSHOT`; future fake-ragdoll/movement/class behavior entries.
+- **Last verified:** Tier 0 blob `1b8a72186b295f3542dd90d92374d5985d7d6e62`; Tier 1 blob `4830503722f005d27373047d8db5c58d4e217559`; damage blob `cce5ff506e9799eb3c1e104ea3146927a8936326`; 2026-07-12.
