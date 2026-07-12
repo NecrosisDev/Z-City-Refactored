@@ -6,16 +6,17 @@
 **Status:** `partial / executable-source verified`  
 **Reviewed:** 2026-07-12
 
-This grouped catalog covers standalone competitive modes that do not justify separate documents. Every entry records the actual registry ID rather than assuming it matches the directory name.
+This grouped catalog covers standalone competitive and administrator-driven modes that do not justify separate documents. Actual registry IDs are verified from `MODE.name`; directory names are not assumed.
 
 ## Summary matrix
 
 | Registry ID | Directory | Files verified | Launch rule | Primary dependencies |
 |---|---|---|---|---|
-| `riot` | `riot` | `sh_riot.lua`, `sv_riot.lua`, `cl_riot.lua` | at least five active players | teams, classes, roles, handcuffs, armor, inventory, TDM spawn points |
-| `gwars` | `gwars` | `sh_gwars.lua`, `sv_gwars.lua`, `cl_gwars.lua` | unconditional `true` | teams, classes, roles, weapons, armor, spawn points, SWAT reinforcement |
-| `superfighters` | `sfd` | `sh_sfd.lua`, `sv_sfd.lua`, `cl_sfd.lua` | unconditional `true` | RandomSpawns points, organism, inventory, appearance, loot boxes, external music |
-| `scugarena` | `scugarena` | `sh_arena.lua`, `sv_arena.lua`, `cl_arena.lua` | unconditional `true`, but chance `0.00` | Slugcat class, organism, spear/grenade weapons, experience/skill, external music |
+| `riot` | `riot` | `sh_riot.lua`, `sv_riot.lua`, `cl_riot.lua` | at least five active players | teams, classes, roles, handcuffs, armor, inventory, TDM points |
+| `gwars` | `gwars` | `sh_gwars.lua`, `sv_gwars.lua`, `cl_gwars.lua` | unconditional `true` | teams, classes, roles, weapons, armor, TDM points, SWAT reinforcement |
+| `superfighters` | `sfd` | `sh_sfd.lua`, `sv_sfd.lua`, `cl_sfd.lua` | unconditional `true` | RandomSpawns, organism, inventory, appearance, loot boxes, remote music |
+| `scugarena` | `scugarena` | `sh_arena.lua`, `sv_arena.lua`, `cl_arena.lua` | unconditional `true`, chance `0.00` | Slugcat class, organism, spear/grenade weapons, rewards, remote music |
+| `event` | `eventhandler` | `sh_event.lua`, `sv_event.lua`, `cl_event.lua` | unconditional `true`, chance `0` | admin/eventer permissions, global strings, persistent custom loot, boxes, UI |
 
 ---
 
@@ -23,36 +24,26 @@ This grouped catalog covers standalone competitive modes that do not justify sep
 
 ### Verified contract
 
-- `sh_riot.lua` blob `e137e56c4f01c4044b1695347e6f6c1252aa108b` registers `RIOT_TDM_LAW` and `RIOT_TDM_RIOTERS` map-point types.
-- `sv_riot.lua` blob `5b92a709a6e18a8566bc6c986df1c42265b422df` registers `name = "riot"`, `PrintName = "Riot"`, no loot, `ForBigMaps = false`, chance `0.03`, and requires at least five non-spectator players.
-- `cl_riot.lua` blob `632b913939a790bbca55085c80a7e503cc613422` owns payload-free start/end presentation and external sound playback.
-- Equipment shuffles `player.GetAll()`, calculates approximately half law enforcement, then assigns rioters to team 0 and law enforcement to team 1.
-- Rioters receive terrorist class, role, randomized melee/consumable equipment and occasional armor. Law receives police class, restraint/police equipment and armor.
-- Alive checks exclude handcuffed players and return two team arrays to the shared winner function.
-
-### Public surfaces
-
-- Channels: `riot_start`, `riot_roundend`, both payload-free and matched by client receivers.
-- Player state: class, role, `CurPluv`, handcuffed netvar, inventory and armor.
-- Registered Riot-specific map points exist, but the effective team spawn method reads `HMCD_TDM_T` and `HMCD_TDM_CT` instead.
-- Client global `RiotSound` stores the sound station.
+- `sh_riot.lua` blob `e137e56c4f01c4044b1695347e6f6c1252aa108b` registers `RIOT_TDM_LAW` and `RIOT_TDM_RIOTERS`.
+- `sv_riot.lua` blob `5b92a709a6e18a8566bc6c986df1c42265b422df` registers `name = "riot"`, chance `0.03`, no loot, and requires at least five non-spectators.
+- `cl_riot.lua` blob `632b913939a790bbca55085c80a7e503cc613422` owns payload-free start/end presentation and sound.
+- Equipment shuffles all players, assigns rioters team 0 and law team 1, then winner logic excludes dead/handcuffed players.
+- Channels `riot_start`/`riot_roundend` are payload-free and matched.
 
 ### Verified defects and risks
 
-1. `MODE.OverideSpawnPos` is misspelled; if the framework expects `OverrideSpawn`/`OverrideSpawnPos`, the intended behavior is inactive.
-2. The two Riot-specific point types are never used by `GetTeamSpawn`; TDM points are used instead.
-3. Player counts and partition indices include spectators before spectators are skipped inside assignment loops. This can leave active players unassigned or distort side sizes depending on shuffled spectator positions.
-4. `CanLaunch()` validates only player count, not required spawn points.
-5. Dot-defined `GuiltCheck` receives the dispatcher-injected mode table as its first argument.
-6. Law inventory code assumes `Inventory.Weapons` exists.
-7. The local `lawArmor` table is unused.
-8. Team labels in `CheckAlivePlayers` (`swatPlayers`, `banditPlayers`) are semantically reversed relative to assigned roles, increasing maintenance error risk.
-9. Client HUD assumes only team 0/1 and mutates persistent Color alpha fields.
-10. External sound station and PluvTown dependencies lack explicit cleanup/availability contracts.
+1. `OverideSpawnPos` is misspelled.
+2. Registered Riot points are unused; `GetTeamSpawn` reads TDM points.
+3. Spectators are counted and shuffled before being skipped during assignment, distorting side sizes/unassigned players.
+4. Launch does not validate points.
+5. Dot-defined `GuiltCheck` receives shifted arguments.
+6. Law inventory assumes `Inventory.Weapons`; `lawArmor` is unused.
+7. Team variable names are reversed relative to roles.
+8. Client assumes teams 0/1, mutates Color alpha, and lacks explicit audio/PluvTown cleanup contracts.
 
 ### Required validation
 
-Five-player threshold with zero/many spectators; all shuffle positions; missing TDM/Riot points; handcuffed-last-player outcome; inventory/class/weapon failures; repeated round state cleanup; music station cleanup; verify intended spawn-override property spelling against framework consumers.
+Threshold with spectators/AFK; shuffle partitions; missing points; handcuffed last player; inventory/class/weapon failures; repeated-round cleanup; spawn-override property consumer.
 
 ---
 
@@ -60,38 +51,26 @@ Five-player threshold with zero/many spectators; all shuffle positions; missing 
 
 ### Verified contract
 
-- `sh_gwars.lua` blob `e1151afb68fff8f01901cde9393aafe8d25c6fff` contains only commented TDM point registration.
-- `sv_gwars.lua` blob `df4f35a18e3ee5aa2752bc2f49d3a716b999fec4` registers `name = "gwars"`, `PrintName = "Gang Wars"`, `ROUND_TIME = 180`, chance `0.02`, no loot, `ForBigMaps = false`, and unconditional launch.
-- `cl_gwars.lua` blob `bd520a9c1f6b772bf8af6ad1a5f80bdd1e634479` owns start/end presentation and layered music that reacts to fear and SWAT arrival.
-- Intermission copies `HMCD_TDM_CT/T` points, reapplies existing teams and sends payload-free start.
-- Equipment gives team 0 Bloodz and team 1 Groove classes/roles, one random firearm plus ammo and medical equipment.
-- At 120 seconds, up to four dead non-spectators respawn as team 2 SWAT at a copied T point or random fallback.
-- End awards/penalizes skill based on the winner from the two-array team winner check.
-
-### Public surfaces
-
-- Channels: `gwars_start`, `gwars_roundend`, payload-free and matched.
-- Player state: classes `bloodz`, `groove`, `swat`; roles; `CurPluv`; team 2 reinforcement; inventory/equipment.
-- Mode state: local `swatSpawned`, copied `CTPoints/TPoints`; client globals `GWARS_LoopStation`, `GWARS_LoopStation2`.
+- `sh_gwars.lua` blob `e1151afb68fff8f01901cde9393aafe8d25c6fff` contains only commented point registration.
+- `sv_gwars.lua` blob `df4f35a18e3ee5aa2752bc2f49d3a716b999fec4` registers `name = "gwars"`, `ROUND_TIME = 180`, chance `0.02`, no loot, unconditional launch.
+- `cl_gwars.lua` blob `bd520a9c1f6b772bf8af6ad1a5f80bdd1e634479` owns start/end presentation and layered fear/SWAT music.
+- Teams 0/1 receive Bloodz/Groove classes and equipment. At 120 seconds up to four dead non-spectators respawn as team 2 SWAT.
+- Channels `gwars_start`/`gwars_roundend` are payload-free and matched.
 
 ### Verified defects and risks
 
-1. `MODE.OverideSpawnPos` is misspelled.
-2. Unconditional launch ignores required TDM spawn points.
-3. `ShouldRoundEnd()` returns `endround or boringround`, but `boringround` is not defined in the file and resolves as a global/nil.
-4. Dot-defined `GuiltCheck` receives shifted arguments.
-5. Random weapon grant is used immediately without `IsValid`; failed `Give` causes method access on invalid/nil weapon.
-6. Delayed `noSound` reset lacks player validity check.
-7. SWAT AR-15 grant is used immediately without validity check.
-8. SWAT team 2 is not included in `CheckAlivePlayers()`, so reinforcement survival does not affect the two-gang winner condition.
-9. End rewards compare every player's current team to a winner derived only from teams 0/1; SWAT is always penalized unless winner semantics change unexpectedly.
-10. SWAT selection uses first dead players rather than randomized/queued criteria and does not reset their prior role/class state comprehensively.
-11. Client music stations are globals, are not visibly stopped in the traced end receiver, and depend on organism/fear fields and external audio files.
-12. HUD team table defines only teams 0/1; a live SWAT player on team 2 can index nil presentation data.
+1. `OverideSpawnPos` misspelling and unconditional launch despite TDM-point use.
+2. `ShouldRoundEnd()` references undefined/global `boringround`.
+3. Guilt argument shift.
+4. Weapon grants are used without validity checks; delayed player callback lacks validity check.
+5. Team 2 SWAT is excluded from alive/winner logic and therefore normally penalized at end.
+6. SWAT selection is first-match rather than randomized/queued and does not comprehensively reset prior state.
+7. Client HUD defines only teams 0/1; team 2 can index nil.
+8. Global music stations are not visibly stopped and assume organism/fear data.
 
 ### Required validation
 
-Missing spawn points; failed weapon grants; disconnect during delayed callbacks; SWAT arrival with zero/many dead players; team 2 HUD and winner behavior; repeated rounds and state reset; all-dead/tie conditions; audio station teardown; classify expected role of SWAT in round victory.
+Missing points; failed grants; delayed disconnects; team 2 HUD/winner semantics; repeated state cleanup; ties/all-dead; audio teardown.
 
 ---
 
@@ -99,38 +78,26 @@ Missing spawn points; failed weapon grants; disconnect during delayed callbacks;
 
 ### Verified contract
 
-- Directory is `sfd`, but `MODE.name = "superfighters"` in both server/client.
-- `sh_sfd.lua` blob `c943cc8b68a8185d0372af5ed7d659d9ece80b68` blocks attack/leg attack for five seconds when `zb.CROUND == "superfighters"`.
-- `sv_sfd.lua` blob `ff0e001e1f12fd62841a57541b7010014f1beae0` enables random spawns/loot, disables guilt, sets `noBoxes = true`, chance `0.04`, and unconditional launch.
-- `cl_sfd.lua` blob `a0a9b18812c2de7cc503798c8b1c29b74274d427` receives start vector, plays remote soundtrack URLs, renders player health/name overlays, and receives winner entity.
-- Intermission cleans map, applies appearance, assigns team 0, selects `table.Random(zb.GetMapPoints("RandomSpawns"))`, and writes its position to `supfight_start`.
-- Round start grants hands/radio/sling, sets organism recoil multiplier and `superfighter` flag, and gives role.
-- Round think emits global hook `Boxes Think` every two seconds.
-- End waits two seconds, sends first alive entity or NULL through `supfight_end`.
-
-### Public surfaces
-
-- Channels: `supfight_start` vector; `supfight_end` entity.
-- Global/shared state: server `zonepoint`; client `StartTime`, `ZonePos`, `dmmusic`; player organism `recoilmul`, `superfighter`; winner entity gets clientside `won = true`.
-- External URL audio list is embedded clientside.
+- Directory `sfd`; registry ID `superfighters`.
+- `sh_sfd.lua` blob `c943cc8b68a8185d0372af5ed7d659d9ece80b68` blocks attacks/leg attacks for five seconds.
+- `sv_sfd.lua` blob `ff0e001e1f12fd62841a57541b7010014f1beae0` enables random spawns/loot, disables guilt, sets `noBoxes = true`, chance `0.04`, unconditional launch.
+- `cl_sfd.lua` blob `a0a9b18812c2de7cc503798c8b1c29b74274d427` receives start vector, plays remote music, overlays player health and receives winner entity.
+- Intermission selects `table.Random(RandomSpawns)` and sends its position; start mutates organism recoil/superfighter flags; end samples winner after two seconds.
+- Channels: `supfight_start` vector and `supfight_end` entity.
 
 ### Verified defects and risks
 
-1. Missing/empty `RandomSpawns` makes `table.Random`/`zonepoint.pos` invalid; launch never validates points.
-2. `CheckAlivePlayers()` excludes incapacitated players, but `ShouldRoundEnd()` uses `zb:CheckAlive(true)` instead, so end semantics can disagree.
-3. Inventory code assumes `Inventory.Weapons` exists.
-4. Delayed player callback lacks `IsValid`.
-5. Organism `recoilmul` and `superfighter` mutations have no traced reset.
-6. `noBoxes = true` conflicts with emitting `Boxes Think`; intended box behavior is unclear.
-7. Winner is sampled after a two-second delay, so deaths/disconnects after round end can change the announced result.
-8. Client HUD assumes organism exists when calculating audio volume.
-9. Remote third-party soundtrack URLs introduce availability, licensing, privacy and latency dependencies.
-10. Client globals (`StartTime`, `ZonePos`, `dmmusic`, `hmcdEndMenu`, per-player `won`) can leak across mode changes/hotload; winner flags are not visibly cleared.
-11. Shared color objects have alpha mutated in HUD.
+1. Missing/empty RandomSpawns causes invalid `zonepoint.pos`; launch does not validate.
+2. Incapacitation-aware `CheckAlivePlayers` disagrees with `ShouldRoundEnd` using `zb:CheckAlive(true)`.
+3. Inventory and organism state are assumed; mutations have no traced reset.
+4. `noBoxes = true` conflicts with emitting `Boxes Think`.
+5. Delayed winner can change after authoritative end; delayed player callback lacks validity check.
+6. Remote URLs and reused globals (`StartTime`, `ZonePos`, `dmmusic`, `hmcdEndMenu`, `won`) create reliability/state/privacy risk.
+7. Client assumes organism and mutates shared colors.
 
 ### Required validation
 
-No/malformed RandomSpawns; incapacitated-last-player; disconnect/death during two-second winner delay; inventory/organism absence; repeated mode transitions and flag reset; box behavior; remote audio failure/offline operation; player health overlay with invalid/hidden players.
+Spawn points; incapacitation; disconnect/death during winner delay; inventory/organism absence; flag reset; boxes; offline audio; repeated UI/winner cleanup.
 
 ---
 
@@ -138,48 +105,85 @@ No/malformed RandomSpawns; incapacitated-last-player; disconnect/death during tw
 
 ### Verified contract
 
-- Directory `scugarena` files are named `sh_arena.lua`, `sv_arena.lua`, `cl_arena.lua`.
-- `sh_arena.lua` blob `47973f582e7964c39d05956f2984ca7538561f91` blocks attack for the first 20 seconds.
-- `sv_arena.lua` blob `afc21591bf0b2f673e5745337c205e01c4a733cf` registers `name = "scugarena"`, `PrintName = "Slug Arena"`, no loot, guilt disabled, random spawns, chance `0.00`, unconditional launch.
-- `cl_arena.lua` blob `4fe7136af632bcb5b5974d8d83c15aa1a522f051` owns remote soundtrack playback, introduction/end UI and winner state.
-- Intermission cleans map, sets every active player to class `Slugcat` and team 0, then sends payload-free `scugarena_start`.
-- Round start grants hands; NWString `scug == normal` receives spear and `saint` receives impact grenade.
-- End condition uses the mode's incapacitation-aware `CheckAlivePlayers`; delayed end awards experience/skill and sends winner entity.
-
-### Public surfaces
-
-- Channels: payload-free `scugarena_start`; entity `scugarena_end`.
-- NWString `scug`; class `Slugcat`; remote soundtrack URLs; client globals/reused globals `dmmusic`, `StartTime`, `hmcdEndMenu`; winner flag `ent.won`.
+- Directory files are `sh_arena.lua`, `sv_arena.lua`, `cl_arena.lua`.
+- `sh_arena.lua` blob `47973f582e7964c39d05956f2984ca7538561f91` blocks attacks for 20 seconds.
+- `sv_arena.lua` blob `afc21591bf0b2f673e5745337c205e01c4a733cf` registers `name = "scugarena"`, no loot, guilt disabled, random spawns, chance `0.00`, unconditional launch.
+- `cl_arena.lua` blob `4fe7136af632bcb5b5974d8d83c15aa1a522f051` owns remote music, intro/end UI and winner state.
+- All active players become `Slugcat`; `scug=normal` gets spear, `saint` gets impact grenade; end uses incapacitation-aware alive check then delayed winner.
+- Channels: payload-free `scugarena_start`, entity `scugarena_end`.
 
 ### Verified defects and risks
 
-1. `Chance = 0.00` makes ordinary weighted selection effectively unreachable, but forced/admin launch remains possible.
-2. Delayed `noSound` reset lacks validity check.
-3. End winner is sampled after two seconds and can change after lifecycle end.
-4. Only exact `scug` values `normal` and `saint` receive weapons; missing/other value gets only hands with no documented fallback.
-5. Remote soundtrack URLs and global `dmmusic` repeat the availability/licensing/state-leak risks from Superfighters.
-6. Client audio volume assumes `ply.organism` exists.
-7. Player `won` flags are set clientside but not visibly cleared before future rounds/modes.
-8. Shared Color alpha is mutated; global end-menu identifier is reused by many modes.
-9. Server creates `hands` local but selects other weapons based on subtype; invalid weapon grants are not handled.
-10. No minimum-player requirement; zero-player and one-player launches can end immediately and still run delayed result/reward logic.
+1. Chance zero makes ordinary selection effectively unreachable while forced launch remains possible.
+2. No minimum-player requirement; zero/one player can immediately end.
+3. Unknown/missing `scug` receives no explicit fallback weapon.
+4. Delayed callback/winner validity and resampling risks.
+5. Remote audio/reused globals/client winner flags leak across mode changes; organism and color assumptions remain.
+6. Weapon grants are not validated.
 
 ### Required validation
 
-Weighted versus forced launch; zero/one player; unknown/missing `scug`; incapacitated winner; disconnect/death during delay; class/weapon availability; repeated winner-state cleanup; remote audio failures; organism absence.
+Weighted/forced launch; zero/one player; subtype fallback; incapacitated winner; delayed disconnect; class/weapons; repeated cleanup; offline audio/organism absence.
+
+---
+
+## `MODE-event` — Administrator-configurable Event
+
+### Verified files and lifecycle
+
+- Directory `eventhandler`; registry ID `event`.
+- `sh_event.lua` blob `3b0fa7cebe57ce6d9a46b74054296b6929e3546b` only aliases the temporary mode table.
+- `sv_event.lua` blob `a2132d6c4e64ee46a7ac76f8baf4e749a9aac0fb` registers no loot by default, guilt disabled, random spawns, `ForBigMaps = true`, chance `0`, unconditional launch, `EndLogicType = 2`, mutable `EventersList`, and custom loot persistence.
+- `cl_event.lua` blob `895da4168328dc32cee7cb12de9cb8c1eb6d573e` owns start/end HUD, eventer list, winner UI, Steam profile links and custom-loot manager.
+- Intermission cleans map, applies appearance/team 0 and samples a `RandomSpawns` point into global `zonepoint`, though current zone logic is commented.
+- Round start replaces `EventersList` with all current admins, broadcasts SteamIDs, grants hands/roles, and may start loot timers.
+- End logic is configurable: all remaining alive are eventers, one-or-fewer alive, or never automatic. End samples first alive entity after two seconds and sends it.
+
+### Network, commands and persistence
+
+- Channels: payload-free `event_start`; entity `event_end`; table `event_eventers_update`; `event_loot_sync`; bidirectional/overloaded `event_loot_request`; client-to-server table `event_loot_add`; uint16 `event_loot_remove`; registered but unverified `event_loot_update`.
+- Custom loot persists to `data/zbattle/event_loot/loot_table_<sanitized-hostname>.txt` as `CustomLootTable` JSON.
+- Event properties use global strings `ZB_EventName`, `ZB_EventRole`, `ZB_EventObjective`.
+- Commands: `zb_event_loot_reset`, `zb_event_loot_save`, `zb_event_lootpoll`, `zb_event_name`, `zb_event_role`, `zb_event_objective`, `zb_event_endlogic`, `zb_event_loot`, `zb_event_eventer_add`, `zb_event_eventer_remove`, `zb_event_end`, and client `zb_event_loot_menu`.
+- Hooks: `Initialize/ZB_EventLoadLootTable`, `PlayerInitialSpawn/ZB_EventLootSync`, `HG_PlayerSay/ZB_EventLootCommand`, `InitPostEntity/ZB_EventLootInitCheck`.
+
+### Verified defects and risks
+
+1. Chance zero plus unconditional launch makes the mode admin/force-driven but still structurally launchable anywhere.
+2. `EventersList` is reset to admins at RoundStart, erasing pre-round manual eventer additions; it is not cleared at EndRound, so prior eventers can remain authorized outside an active event until next RoundStart.
+3. Concommand callbacks misuse `args` (a table) as scalar: `SetGlobalString(..., args)`, `tonumber(args)`, `player.GetBySteamID(args)`. Name/role/objective/end-logic/loot-enable/eventer commands therefore cannot reliably apply requested values.
+4. Eventer chat command runs client `zb_event_loot_menu`, but the client command rejects non-admins; server-authorized eventers cannot open the current UI.
+5. `event_loot_add` accepts a decoded table with only field presence checks: no type, range, class existence, string length, table size or rate limits. Negative/huge weights and arbitrary classes can enter persistence.
+6. Loaded JSON is checked only for decode success, then indexed as `CustomLootTable[1][2]`; valid JSON with the wrong shape can error.
+7. Reset recipient loop uses invoking `ply` instead of loop variable `p` in the eventer check. A non-admin eventer reset can send the full loot table to every connected player.
+8. `event_loot_request` is used both client-to-server for sync and server-to-client to open the menu, obscuring direction/schema and complicating validation.
+9. Registered `event_loot_update` has no verified use.
+10. Loot can emit `Boxes Think` from both a five-second repeating timer and `RoundThink` every two seconds, duplicating spawn work when enabled.
+11. Global timer `EventLootSpawnTimer` and multiple initialization hooks can persist/duplicate behavior outside active mode; the InitPostEntity check starts the timer whenever `LootEnabled` is true, regardless of current mode.
+12. RoundStart delayed `ply.noSound = false` lacks validity check.
+13. End winner is resampled after two seconds and may differ after death/disconnect; client sets per-player `won` flags and reuses global `hmcdEndMenu`.
+14. Client mutates shared role colors' alpha and assumes `zb.ROUND_START`, `lply`, fonts/skins and external UI classes exist.
+15. EndLogicType 1 uses `zb:CheckAlive(true)` rather than the mode's incapacitation-aware `CheckAlivePlayers`, creating inconsistent end semantics.
+16. `zonepoint`, radius/mapsize variables and commented zone code are dead/stale state; launch does not validate RandomSpawns.
+17. Administrative settings, eventer membership and custom loot are mutable globals with no audit trail, schema version or transactional rollback.
+
+### Required validation
+
+Forced launch; every end logic; eventer add/remove before/during/after round; command argument behavior; admin versus eventer UI access; malformed/oversized/rate-flooded loot payloads; wrong-shaped persistence; hostname changes; duplicate loot timers; event mode inactive with loot enabled; zero/one players; delayed winner; UI/global cleanup; authorization/data exposure.
 
 ## Cross-mode findings
 
-- Riot and Gang Wars repeat the misspelled `OverideSpawnPos`; trace the actual framework property before any implementation change.
-- Riot, Gang Wars and several earlier team modes reuse TDM spawn point identifiers rather than owning stable mode-specific spawn contracts.
-- Superfighters and Slug Arena duplicate remote-audio/end-menu patterns and global names, increasing cross-mode state collisions.
-- Dot-defined mode functions remain susceptible to dispatcher argument shifting.
-- Many delayed callbacks capture players/entities without validity checks.
-- Several modes sample winners after a delay rather than freezing authoritative round results at end transition.
+- Riot/Gang Wars repeat `OverideSpawnPos`; framework consumer must be traced before correction.
+- Several modes reuse TDM points rather than stable mode-specific contracts.
+- Superfighters/Slug Arena/Event duplicate winner-delay, global end-menu and per-player winner patterns.
+- Remote or externally stored music and global stations recur without unified lifecycle ownership.
+- Dot-defined functions remain susceptible to dispatcher argument shifts.
+- Delayed callbacks frequently lack validity checks; winner results are often not frozen at the authoritative transition.
+- Event mode adds persistent, admin-editable configuration without schema validation, versioning or auditability.
 
 ## Next trace
 
-1. Trace the framework consumers for spawn-override flags and map-point routing.
-2. Continue unresolved mode directories (`criresp`, `eventhandler`, `pathowogen`, `homicide_fear`, and others) using verified filenames/registration IDs.
-3. Build the mode-function classification/collision matrix and packet matrix across all cataloged modes.
-4. Consolidate repeated UI/music/end-menu patterns only as a planned implementation package after every consumer is mapped.
+1. Continue unresolved directories (`pathowogen`, `homicide_fear`, and any undiscovered mode files) using verified filenames/IDs.
+2. Trace framework consumers for spawn overrides, map routing, command args and emitted round hooks.
+3. Build cross-mode function classification/collision and packet matrices.
+4. Add planned consolidation packages only after every consumer is mapped.
