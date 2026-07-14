@@ -1,24 +1,24 @@
 # Vanilla–Trauma Comparison Ledger
 
-This ledger controls what enters the new project. It is intentionally decision-oriented rather than file-oriented.
+This ledger controls what enters the new project. It is decision-oriented rather than file-oriented. Trauma is evidence, not the baseline; see `../decisions/ADR-0002-TRAUMA_IS_EVIDENCE_NOT_BASELINE.md`.
 
 ## Decision states
 
 | State | Meaning |
 |---|---|
 | Unreviewed | Attempt identified but not traced. |
-| Keep vanilla | Vanilla behavior remains the preferred implementation. |
+| Keep Z-City | Current behavior remains preferred. |
 | Adopt | Trauma's concept and implementation are suitable with minimal integration work. |
 | Adapt | A bounded portion can be integrated behind project APIs. |
 | Rewrite | The requirement is valid but the implementation should not be carried forward. |
 | Reject | The attempt is unnecessary, harmful, or outside project scope. |
-| Blocked | More behavioral evidence or testing is required. |
+| Deferred | More behavioral evidence or prerequisite work is required. |
 
 ## Review requirements
 
-Each row must eventually link to:
+Each resolved row must eventually link to:
 
-- vanilla behavior documentation;
+- verified Z-City behavior documentation;
 - current repository behavior;
 - Trauma implementation evidence;
 - observed defect or requirement;
@@ -28,39 +28,59 @@ Each row must eventually link to:
 - acceptance tests;
 - an ADR when the decision is architecturally significant.
 
-## Initial ledger
+## Decision ledger
 
-| Area | Trauma attempt | Preliminary concern | State |
+| Area | Trauma attempt | Decision | Reason / prerequisite |
 |---|---|---|---|
-| Boot/loading | Additional loaders and compatibility bootstraps | Overlapping initialization paths may load or register systems twice. | Unreviewed |
-| Mode lifecycle | Explicit mode base and lifecycle ownership | Useful intent; implementation may intercept global hook/timer APIs and hide dependencies. | Rewrite candidate |
-| Mode discovery | Structured mode directories and selection | Must preserve vanilla round behavior and avoid filename-order coupling. | Adapt candidate |
-| Hook ownership | Associate registrations with active modes | Needed for cleanup, but global interception is high risk. | Rewrite candidate |
-| Timer ownership | Cleanup mode timers on transition | Needed; anonymous `timer.Simple` ownership and delayed callbacks require explicit cancellation tokens. | Rewrite candidate |
-| Registries | Active registry and subsystem registration | Must avoid becoming another mutable global table without validation or ownership. | Adapt candidate |
-| Self-tests | Shared/server/client self-test modules | Registration checks are useful but cannot substitute for behavioral tests. | Adapt candidate |
-| Spawn management | Spawn contracts and centralized spawn library | Must be compared against every vanilla mode's spawn/death/spectator flow. | Blocked |
-| Organism | Expanded medical and organism behavior | High regression risk; vanilla damage semantics must be mapped first. | Blocked |
-| Fake ragdoll | Extended fake/death/combat behavior | Core identity feature; preserve vanilla interaction and prediction before refactoring. | Blocked |
-| Bots | Bot driver and mode behavior additions | Existing reports indicate immobility, aim, crouch, and objective-flow defects. | Rewrite candidate |
-| Networking | Hundreds of messages and receivers | Ownership, validation, schema, and rate limits are not centralized. | Rewrite candidate |
-| Optional adapters | Glide, VJ Base, Pathowogen, DynaBase, others | Adapters should detect capabilities and remain inert when dependencies are absent. Bundled vendor code should be separated. | Rewrite candidate |
-| Minimap | Custom minimap libraries | Must prove gameplay value and stable cleanup; avoid mode-specific globals. | Unreviewed |
-| Onboarding | Structured onboarding library | Concept is useful if content is data-driven and reflects actual mechanics. | Adapt candidate |
-| Map tools | Mappoint and traitor/map compatibility tooling | Useful project goal; needs clear server authority and persistent schema. | Adapt candidate |
-| Weapon balance | Centralized balance layer | Avoid runtime mutation of stock SWEP tables without ownership and deterministic reset. | Unreviewed |
-| Client performance | Potato-PC and render-effect toggles | Useful where defaults remain visually correct and settings fail safely. | Adapt candidate |
-| Content loading | Configurable Workshop loading | Current repository setting is ineffective; replace with a truthful content manifest. | Rewrite candidate |
+| Boot/loading | Additional loaders, numeric filename ordering, deferred bootstrap, compatibility autoruns | Deferred | First boot map exists, but the complete autorun tree and hot-reload behavior still require runtime tracing. Multiple boot paths must not be copied. |
+| Deterministic loading | Sort files/directories before inclusion | Adapt | Determinism is useful, but explicit dependency phases are preferable to relying on lexical filenames. |
+| Mode registration | Global `MODE` capture plus V2 structured mode definitions | Rewrite | Keep explicit structured registration; remove ambient mutable capture for new modes and bridge legacy modes temporarily. |
+| Mode lifecycle | Explicit activation, deactivation, generation, and diagnostics | Adapt | The lifecycle model is valid. Final APIs must use Z-City ownership scopes. See `sources/trauma-lifecycle-assessment.md`. |
+| Hook ownership | Capture mode hooks and remove them on deactivation | Rewrite | Required capability, but Trauma's temporary replacement of global `hook.Add` is rejected. Use explicit owner APIs. |
+| Timer ownership | Capture named timers and generation-guard simple timers | Rewrite | Required capability. Anonymous delayed work must receive cancellable owned IDs; global timer interception is rejected. |
+| Generation guards | Ignore delayed callbacks from inactive mode generations | Adopt | Low-cost protection with clear semantics; integrate into owned tasks and asynchronous completions. |
+| Persistent hooks | Hard-coded event allowlist remains global | Reject | Lifetime must be declared per resource, not inferred from event name. |
+| Static registration capture | Loader captures registrations made by mode files | Deferred | May be useful as temporary migration/audit tooling, not as permanent runtime architecture. |
+| Lifecycle diagnostics | Active mode, generation, hook and timer counts | Adapt | Expand with owner, source, realm, lifetime, replacement history, and leak reporting. |
+| Legacy mode dispatcher | Mode-table function names automatically become hook handlers | Keep Z-City temporarily | Preserve behavior until every mode method is classified. Replace only behind parity tests. |
+| Active registries | Dense array plus reverse-position map and pruning | Adapt | Useful collection primitive. Encapsulate live storage, declare ordering semantics, and separate lifecycle ownership. |
+| Self-tests | Shared/server/client command-driven diagnostics | Rewrite | Keep the concept but separate static audit, production health checks, smoke tests, behavioral tests, and performance tests. |
+| Spawn contracts | Explicit team/FFA/solo topology and validation | Deferred | Document vanilla spawn selection, map points, fallbacks, and each mode before adopting stricter validation. |
+| Spawn validation cache | Cache valid and invalid spawn clusters by map/mode/count | Rewrite | Cache key lacks configuration/implementation/validation versions; invalid results can become stale. |
+| Organism | Expanded medical modules, narcotics, infection, delta networking | Deferred | High regression risk. Map vanilla organism initialization, damage, clearing, fake/death interaction, and replication first. |
+| Fake ragdoll | Extended fake, vehicle, play-dead, combat, and rendering behavior | Deferred | Core identity system. Requires full vanilla state-machine and prediction documentation. |
+| Bots | Bot driver, behavior arbitration, survival, rescue, squads, mode-specific bots | Deferred | Treat as a separate architecture after player/mode/spawn contracts are stable. Existing behavior reports show major defects. |
+| Networking | Hundreds of declarations, receivers, and sends across realms | Rewrite | Build a network registry and schema audit; duplicate names need realm-aware classification. |
+| Optional adapters | Glide, VJ Base, DynaBase, vFire, Pathowogen and others | Rewrite | Adapters must be capability-detected, inert when absent, isolated from vendored code, and tested independently. |
+| Bundled vendor systems | Large portions of Glide, DynaBase, vFire and related content included in project | Reject as default architecture | Prefer external dependencies or isolated vendor packages. Project adapters must not be mixed with vendor internals. |
+| Minimap | Bake, sync, client map, and relation hooks | Unreviewed | Requires separate stability and value assessment. |
+| Onboarding | Structured intro, input icons, keybind and rich-text systems | Adapt | Good concept if data-driven and generated from verified mechanics/settings. |
+| Map tools | Map points, traitor controls, validation and map checks | Adapt | Useful, but schemas, authority, permissions, migration, and cache invalidation need formal definitions. |
+| Weapon balance | Runtime schema/editor/application layer | Deferred | Document weapon inheritance and mutation behavior. Avoid irreversible mutation of stock SWEP tables. |
+| Weapon obstruction | Muzzle/barrel and side-obstruction logic | Deferred | Requires comparison with vanilla aiming, ADS, low/high ready, vehicles, and bot muzzle behavior. |
+| Explosion manager | Central explosive/shrapnel processing | Unreviewed | Evaluate after current damage, phys-bullet, entity, and organism pipelines are mapped. |
+| Client performance | Shared performance registry, budgets, effect toggles | Adapt | Keep truthful user/server controls; avoid a single toggle masking correctness bugs. Measure before enabling dynamic degradation. |
+| Content loading | Configurable Workshop loading | Rewrite | Current repository ConVar controls a block with commented resource calls. Replace with a truthful manifest and dependency report. |
+| Administration | Expanded context properties, possession, scaling, medical and NPC tools | Deferred | Inventory permissions and server authority before porting. Every action requires explicit access and validation. |
 
-## First decision boundary
+## Verified source documents
 
-No gameplay subsystem will be ported until the following vanilla flows are documented:
+- `zcity/boot-and-loading.md`
+- `zcity/mode-and-round-lifecycle.md`
+- `sources/trauma-inventory.md`
+- `sources/trauma-lifecycle-assessment.md`
+- `../decisions/ADR-0001-EXPLICIT_MODE_LIFECYCLE_OWNERSHIP.md`
+- `../decisions/ADR-0002-TRAUMA_IS_EVIDENCE_NOT_BASELINE.md`
+
+## Behavioral spine required before gameplay ports
+
+No gameplay subsystem will be ported until these flows are documented and assigned acceptance tests:
 
 1. addon boot and load order;
 2. gamemode selection and round lifecycle;
 3. player initial spawn, spawn, death, fake death, spectating, and respawn;
-4. organism initialization, damage, clearing, and death;
+4. organism initialization, damage, clearing, incapacitation, and death;
 5. weapon deployment, aiming, obstruction, firing, and damage dispatch;
-6. map cleanup and hot-reload behavior.
+6. map cleanup, shutdown, and hot-reload behavior.
 
-These flows form the behavioral spine. Porting higher-level features before them would reproduce Trauma's layering problems.
+These flows form the compatibility spine. Higher-level ports before them would reproduce Trauma's layering problems.
