@@ -76,6 +76,27 @@ A Trauma change is retained only when it provides a specific benefit over vanill
 
 **Status:** approved guardrail; broad network tooling expansion is explicitly out of scope.
 
+### TZ-006 — Current repository is the vanilla implementation baseline
+
+**Verified current branch state:** `README.md` identifies the connected repository as Z-City 1.4.0 and describes the stock addon/gamemode. The prior refactor artifact set references a separate `lua/zcity/systems/...` architecture, including a singular vehicle facade and medical vehicle-trauma bridge, but representative files from that architecture are absent from the connected `main` branch.
+
+**Trauma/refactor evidence available:** previous generated artifacts document intended systems such as `zb.Vehicle`, canonical vehicle runtime hooks, optional Glide compatibility, and a diagnostic-first vehicle medical bridge. Those artifacts are evidence of attempted design work, not proof that the implementation exists in this repository.
+
+**Vanilla baseline:** the code presently on `main` remains the only verified executable baseline in the repository. Documentation must not claim that artifact-only systems are implemented, tested, or available here.
+
+**Decision:** treat prior refactor artifacts as a concept inventory only. Before refining any concept into production code:
+
+- identify the exact vanilla files that own the behavior;
+- identify the exact Trauma change being considered;
+- verify whether any equivalent implementation already exists on the current branch;
+- define a bounded destination inside the current repository structure;
+- add the smallest implementation that preserves vanilla behavior;
+- distinguish static validation from live Garry's Mod testing.
+
+Do not recreate the previous broad facade/registry architecture merely because it appears in archived diffs or handoff files. Each architectural element must independently justify its cost against a concrete migration.
+
+**Status:** verified repository boundary; supersedes any prior implication that the archived refactor implementation is already present on `main`.
+
 ## Rejected approaches
 
 The following are not justified for the refactor:
@@ -85,10 +106,12 @@ The following are not justified for the refactor:
 - registering optional entities or animation sources before validating their complete dependencies;
 - replacing vanilla behavior merely because Trauma contains a larger implementation;
 - expanding audits or documentation without a named subsystem migration that consumes the result;
-- enabling vehicle injury tuning before live server validation.
+- enabling vehicle injury tuning before live server validation;
+- treating archived generated diffs, ZIP handoffs, or guidestones as current repository implementation;
+- rebuilding the entire prior refactor scaffolding before a concrete gameplay migration requires it.
 
 ## Next bounded migration candidate
 
-The strongest justified candidate is **optional integration hardening** because current Trauma runtime evidence shows concrete startup failures and dependency leakage. A future work order should select exactly one adapter, preserve vanilla behavior, define the complete required API surface, add inert fallback behavior, and test startup both with and without that dependency.
+The next implementation must begin from one verified vanilla owner file on the current branch. The strongest candidate remains optional integration hardening, but no adapter should be written until its actual vanilla interaction point and Trauma counterpart are both identified. The deliverable should be one dependency-safe adapter or one explicit rejection decision—not another general inventory framework.
 
-No production Lua behavior was changed by this document.
+No production Lua behavior has been changed by this decision register.
