@@ -46,6 +46,7 @@ Earlier bare “vanilla/current Z-City” wording is deprecated.
 - `zcity/player-lifecycle.md`
 - `zcity/player-class-inventory-equipment-boundary.md`
 - `zcity/round-and-spectator-networking.md`
+- `zcity/network-contract-and-trust-boundaries.md` — project-wide target endpoint, snapshot, request, visibility, compatibility, and abuse-control contract.
 - `zcity/organism-lifecycle-and-damage.md`
 - `zcity/fake-ragdoll-lifecycle.md`
 - `zcity/weapon-and-combat-interfaces.md`
@@ -58,6 +59,7 @@ Unless explicitly stated otherwise, the older Z-City documents are source-verifi
 
 - `sources/trauma-clean-inventory.md` — current prototype inventory.
 - `sources/trauma-mode-lifecycle-comparison.md` — canonical detailed lifecycle comparison.
+- `sources/trauma-networking-assessment.md` — current prototype network attempt families, dispositions, risks, and evidence gaps.
 - `sources/trauma-lifecycle-assessment.md` — earlier deep implementation assessment; revalidate file-level references against Trauma Clean.
 - `sources/trauma-weapon-combat-assessment.md` — preliminary weapon-area assessment; exact graph still required.
 - `sources/trauma-inventory.md` — historical snapshot pointer only.
@@ -83,6 +85,9 @@ Completed enough to guide continued analysis:
 - mode/round lifecycle and loader boundaries;
 - player admission and round-reset orchestration;
 - round/spectator networking baseline;
+- project-wide network target contract with 14 requirements and 18 acceptance tests;
+- proof that the surveyed round/spectator files are unchanged in later upstream vanilla `3716789`;
+- current Trauma network attempt-family dispositions and explicit migration exclusions;
 - organism and fake-ragdoll ownership risks;
 - fake-body weapon interface risks;
 - 27 stable foundation defects;
@@ -95,7 +100,7 @@ Not yet complete enough for broad replacement:
 - exact Trauma Clean dependency-bootstrap side-effect trace;
 - exhaustive stock-mode method/resource inventory;
 - complete weapon publisher/consumer and fire graph;
-- complete network registry and trust-boundary matrix;
+- generated complete endpoint registry, duplicate-owner resolution, and runtime packet/bandwidth evidence;
 - medical item and organism packet consumers;
 - map cleanup, disconnect, shutdown, and refresh coverage;
 - bot/NPC architecture;
@@ -106,4 +111,4 @@ Not yet complete enough for broad replacement:
 
 Research does not need to be globally complete before any code changes. A bounded work package may begin when it satisfies Gates 0–2 in `../BUILD_GUIDE.md` and cannot create a second authority or untestable rollback.
 
-The first implementation phase is observation and low-risk foundation corrections, not a full loader, organism, fake-ragdoll, or weapon rewrite.
+The first implementation phase is observation and low-risk foundation corrections, not a full loader, organism, fake-ragdoll, weapon, or network rewrite.
