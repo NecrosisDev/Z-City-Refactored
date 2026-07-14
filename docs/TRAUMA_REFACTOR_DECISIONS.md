@@ -105,13 +105,15 @@ Do not recreate the previous broad facade/registry architecture merely because i
 
 **Observed gap:** a custom group that is meaningful to an external permission system but does not satisfy Garry's Mod's native `IsAdmin`/`IsSuperAdmin` checks cannot see or invoke these properties. Replacing every property filter or making ULX mandatory would duplicate policy and couple core admin tools to one vendor.
 
-**Decision:** preserve the native checks and add one shared extension hook, `ZCityAdminToolsAccess(player, superAdminRequired)`. An optional adapter may return literal `true` to grant access. Missing adapters, nil returns, errors outside the hook, or explicit false values do not alter vanilla denial. The hook is evaluated by the same method on client and server, so an adapter must provide matching shared policy; server-side property filters remain authoritative.
+**Decision:** preserve the native checks and add one shared extension hook, `ZCityAdminToolsAccess(player, superAdminRequired)`. An optional adapter may return literal `true` to grant access. Missing adapters, nil returns, explicit false values, or adapter failures preserve vanilla denial. The hook is evaluated by the same method on client and server, so an adapter must provide matching shared policy; server-side property filters remain authoritative.
 
-**Implemented refinement:** `Player:ZCTools_GetAccess` now checks native admin state first, then accepts only `hook.Run("ZCityAdminToolsAccess", self, bSAdmin) == true`. No ULX/ULib code, group names, or vendor APIs were added.
+**Implemented refinement:** `Player:ZCTools_GetAccess` checks native admin state first, invokes the optional extension through `pcall`, accepts only a literal `true`, and fails closed when an adapter throws. The first adapter failure in each realm is reported with `ErrorNoHaltWithStack`; repeated access checks do not flood logs. No ULX/ULib code, group names, or vendor APIs were added.
 
-**Static verification:** the existing property actions still route through `ZCTools_GetAccess`; native admin and superadmin behavior is unchanged; absent adapters evaluate to false; the change adds no network strings or receivers. Live Garry's Mod verification with a custom permission adapter remains required before claiming external-group support.
+**Static verification:** the existing property actions still route through `ZCTools_GetAccess`; native admin and superadmin behavior is unchanged; absent adapters evaluate to false; throwing adapters evaluate to false; the change adds no network strings or receivers. Live Garry's Mod verification with a custom permission adapter remains required before claiming external-group support.
 
-**Status:** implemented as a dependency-free integration seam; vendor-specific adapter remains separate and unapproved.
+**Provider comparison result:** the current repository does not contain an inspected ULX/ULib provider implementation or a pinned provider source. A vendor adapter is therefore not justified in core code during this run. The Z-City seam remains provider-neutral until the exact shared client/server permission API is available for verification.
+
+**Status:** implemented as a dependency-free, failure-isolated integration seam; vendor-specific adapter remains separate and unapproved.
 
 ## Rejected approaches
 
@@ -125,10 +127,11 @@ The following are not justified for the refactor:
 - enabling vehicle injury tuning before live server validation;
 - treating archived generated diffs, ZIP handoffs, or guidestones as current repository implementation;
 - rebuilding the entire prior refactor scaffolding before a concrete gameplay migration requires it;
-- scattering vendor permission checks throughout individual C-menu properties.
+- scattering vendor permission checks throughout individual C-menu properties;
+- embedding an unverified ULX/ULib API contract into core Z-City code.
 
 ## Next bounded migration candidate
 
-The permission seam is complete at the Z-City ownership boundary. The next run should either inspect one exact optional permission provider and build a separately loadable adapter with matched client/server behavior, or reject that provider if its available API cannot support deterministic shared checks. It must not broaden into a general permissions framework.
+The permission boundary is complete until a pinned provider implementation is supplied. The next run should leave permissions alone and select one different Trauma concept with an exact vanilla owner and an inspectable source counterpart. It must produce either one bounded refinement or one explicit rejection; it must not return to broad inventories.
 
 Production Lua changed only at the verified `ZCTools_GetAccess` owner. No property implementation, network protocol, round behavior, organism behavior, or vendor dependency was modified.
