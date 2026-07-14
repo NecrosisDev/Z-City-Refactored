@@ -1,25 +1,58 @@
 # Trauma Source Inventory
 
-> Status: initial structural inventory. Counts are lexical and require semantic verification.
+**Status:** Initial structural inventory with selected semantic review. Counts are static observations and require realm-aware runtime verification.
 
-## Scope
+## Snapshot identity
 
-The supplied `Trauma.zip` contains a Garry's Mod addon rooted at `TMod` with both a large `lua/homigrad` tree and a `gamemodes/trauma` implementation.
+| Field | Value |
+|---|---|
+| Source | `Trauma.zip` |
+| SHA-256 | `0286d0f25f9744cc6387e8676e9429ef11a8991bbad6bda45961f4358b534652` |
+| Archive size | 4,425,563 bytes |
+| Extracted root | `TMod` |
+| Lua files | 1,028 |
+| Lua source size | approximately 8.62 MB |
 
-Initial scan:
+Machine-readable metrics are stored in `../data/trauma-snapshot-2026-07-14.json`.
+
+## Static registration surface
 
 | Metric | Count |
 |---|---:|
-| Lua files scanned | 1,009 |
-| `hook.Add` calls | 1,144 |
-| Distinct hook event names | 256 |
-| `util.AddNetworkString` calls | 321 |
-| `net.Receive` calls | 333 |
-| ConVar creation calls | 351 |
-| Timer creation/adjustment calls | 642 |
-| Global table initializer patterns | 195 |
+| `hook.Add` calls | 1,150 |
+| `timer.Create` calls | 90 |
+| `timer.Simple` calls | 546 |
+| `util.AddNetworkString` calls | 327 |
+| `net.Receive` calls | 340 |
+| `net.Start` calls | 465 |
+| `CreateConVar` calls | 236 |
+| `CreateClientConVar` calls | 119 |
+| `concommand.Add` calls | 200 |
+| `file.Write` calls | 42 |
 
-These counts demonstrate scale, not correctness. Dynamic registration, aliases, commented code, generated names, and wrappers require deeper review.
+These counts include inherited Z-City code, bundled third-party code, experimental replacements, comments/dead paths, and overlapping implementations. They measure review surface, not feature count.
+
+## Literal duplicate groups
+
+Static literal-name analysis found:
+
+| Type | Duplicate groups |
+|---|---:|
+| Network-string declarations | 5 |
+| Network receivers | 30 |
+| Hook event/identifier pairs | 9 |
+| ConVars | 30 |
+| Named timers | 4 |
+
+Duplicate network declarations include:
+
+- `defense_commander_notification`;
+- `projectileFarSound`;
+- `select_mode`;
+- `send_tourniquets`;
+- `updtime`.
+
+Duplicates are not automatically defects. Shared files may intentionally define opposite-realm receivers, and ConVars may be retrieved through create-if-missing patterns. Each group requires realm, load-order, and replacement analysis.
 
 ## Major implementation areas
 
@@ -28,156 +61,229 @@ These counts demonstrate scale, not correctness. Dynamic registration, aliases, 
 The `lua/homigrad` tree includes:
 
 - achievements;
-- administration and admin tools;
-- bot driving;
+- administration and context tools;
+- bot driving and behavior arbitration;
 - clothes and appearance;
-- combatant logic;
+- combatant and NPC relation abstractions;
 - dynamic animation utilities;
 - multiple music systems;
-- explosives;
-- fake-ragdoll behavior;
-- HUD;
+- explosives and an explosion manager;
+- fake-ragdoll, vehicle, play-dead, and rendering changes;
+- HUD and health inspection;
 - inventory;
 - movement;
-- organism and medical behavior;
-- Pathowogen integration;
+- organism, medical, narcotic, infection, and Pathowogen behavior;
 - physical bullets;
 - player classes;
-- postmortem behavior;
-- self-tests;
+- postmortem systems;
+- self-tests and performance reporting;
 - VJ Base support;
-- chat;
-- manipulation and zombie systems.
+- chat, manipulation, and zombie systems.
 
 ### Gamemode systems
 
-`gamemodes/trauma/gamemode` contains:
+`gamemodes/trauma/gamemode` includes:
 
-- core libraries;
-- custom gamemode infrastructure;
+- legacy libraries and round systems;
+- a mode lifecycle manager;
+- custom gamemode V1/V2 infrastructure;
+- schemas, storage, networking, editors, abilities, and stock-mode adapters;
 - experience and guilt systems;
-- map points and map tools;
+- map points and map tooling;
 - minimap;
 - onboarding;
 - RTV;
-- spawn management;
-- weapon balance;
-- mode lifecycle and mode base layers;
-- many game modes, including DM, TDM, HL2DM, Homicide, Defense, Riot, COOP, and Pathowogen-derived modes.
+- spawn contracts and validation;
+- weapon-balance schemas and editors;
+- many stock and experimental modes.
 
-### Bundled or copied integrations
+### External integrations and bundled systems
 
-The archive includes substantial external or optional-system content, including:
+The archive includes substantial optional/vendor material:
 
-- Glide entity bases and vehicle entities;
-- vFire entities;
-- wOS DynaBase content;
-- VJ Base-facing code;
+- Glide base entities, vehicle entities, effects, tools, weapons, and multiple adapters;
+- vFire entities/effects/management;
+- wOS DynaBase source and loaders;
+- focused VJ Base integration files;
 - Pathowogen-facing code;
-- several adapter/loader files.
+- compatibility autoruns and direct vendor modifications.
 
-These must be separated into four categories during review:
+Every file in these areas must be classified as one of:
 
 1. original project code;
 2. copied third-party code;
-3. compatibility adapters;
-4. modifications applied directly to vendor code.
+3. compatibility adapter;
+4. direct vendor modification;
+5. project feature incorrectly coupled to a vendor system.
 
-Bundling and modifying optional dependencies directly is a major maintenance and conflict risk.
+Bundled optional systems are not accepted as the future dependency strategy.
 
-## Early lifecycle findings
+## Attempt groups
 
-The most frequently registered events include:
+### 1. Identity and bootstrap
 
-| Event | Registrations |
-|---|---:|
-| `Think` | 73 |
-| `InitPostEntity` | 60 |
-| `HUDPaint` | 48 |
-| `PlayerDeath` | 31 |
-| `PostCleanupMap` | 31 |
-| `OnEntityCreated` | 30 |
-| `Player Spawn` | 28 |
-| `Org Think` | 28 |
-| `Player_Death` | 26 |
-| `radialOptions` | 25 |
-| `PlayerInitialSpawn` | 23 |
-| `Org Clear` | 22 |
-| `Player Think` | 20 |
-| `RenderScreenspaceEffects` | 19 |
-| `PlayerSpawn` | 18 |
-| `EntityTakeDamage` | 17 |
-| `PlayerDisconnected` | 16 |
-| `OnNetVarSet` | 16 |
-| `ZB_PreRoundStart` | 16 |
+Trauma attempts to add explicit project identity, logging, Workshop delivery, deferred loading, and compatibility patches.
 
-The simultaneous use of names such as `PlayerSpawn`, `Player Spawn`, `Player_Death`, `PlayerDeath`, and project-specific event variants suggests multiple lifecycle dialects. Some may be intentional internal events; others may represent legacy duplication or compatibility layers. They must be traced before consolidation.
+Preliminary disposition:
 
-## Early networking findings
+- project metadata: adapt;
+- compatibility aliases: retain temporarily;
+- multiple bootstraps and numeric autorun ordering: reject as final design;
+- deferred/post-entity concepts: rewrite after hot-reload documentation;
+- Workshop list: replace with a truthful manifest.
 
-The lexical scan found network strings declared more than once, including:
+### 2. Deterministic loading
 
-- `projectileFarSound`;
-- `select_mode`;
-- `send_tourniquets`;
-- `updtime`;
-- `defense_commander_notification`.
+Trauma explicitly sorts some file/folder discovery.
 
-Duplicate declarations are not automatically runtime failures in Garry's Mod, but they are evidence of unclear ownership. Each network message needs one documented owner, schema, direction, validation policy, and rate expectation.
+Benefit: removes some dependence on unspecified `file.Find` ordering.
 
-The count mismatch between 321 declarations and 333 receivers also requires investigation. Potential explanations include engine-provided messages, conditional declarations, duplicate receivers, dynamic names, or missing declarations.
+Remaining problem: lexical prefixes still substitute for declared dependencies, and side-effect registration remains the load model.
 
-## Early architectural concerns
+Disposition: adapt, then replace with phased manifests.
 
-The archive appears to combine several generations of architecture:
+### 3. Mode lifecycle ownership
 
-- stock-style global `hg` systems;
-- a custom Trauma gamemode layer;
-- lifecycle ownership mechanisms;
-- self-test systems;
-- adapters;
-- direct vendor copies;
-- compatibility patches;
-- legacy modes and newer replacements.
+Trauma captures hooks/timers during mode loading and callback execution, activates registrations for the current mode, removes them on transition, and guards callbacks with a generation counter.
 
-This can create the appearance of modularity while retaining hidden global coupling underneath.
+The goal is valid. Temporary replacement of global `hook.Add`, `timer.Create`, and `timer.Simple` is rejected.
 
-Specific risks to verify:
+Detailed decision: `trauma-lifecycle-assessment.md`.
 
-1. Multiple loaders or initialization paths loading overlapping files.
-2. Numeric or filename-based ordering substituting for declared dependencies.
-3. Hook and timer ownership implemented by intercepting global APIs.
-4. Legacy and replacement systems both remaining active.
-5. Cleanup paths failing during round changes, map cleanup, hot reload, or disconnect.
-6. Client files receiving server implementation details unnecessarily.
-7. Network receivers trusting client-provided entities, identifiers, amounts, or state.
-8. Optional integrations becoming hard dependencies because vendor code is bundled.
-9. Self-tests validating registration rather than actual gameplay behavior.
-10. Compatibility guards suppressing symptoms while leaving lifecycle defects unresolved.
+### 4. Custom gamemode framework
 
-## Concepts worth evaluating
+Trauma's `customgm` system attempts:
 
-The following Trauma concepts may be useful after comparison with vanilla:
+- data-driven modes;
+- reusable modules;
+- runtime-editable configuration;
+- validation and sanitation;
+- storage and submission workflows;
+- class, role, organism, ability, and stock-mode adapters;
+- separation between authored definitions and active round state.
 
-- explicit mode lifecycle;
-- registries with ownership metadata;
-- deterministic mode discovery;
-- cleanup-aware hook and timer ownership;
-- optional adapters;
-- spawn contracts;
-- self-tests;
-- onboarding and map tooling;
-- network and dependency audits.
+Risks:
 
-None are approved yet. Each needs a behavior comparison and an architectural decision record.
+- V1 and V2 overlap;
+- a second framework wraps the legacy framework instead of replacing it cleanly;
+- adapters duplicate intimate stock-mode knowledge;
+- storage, validation, runtime mutation, UI, and networking are tightly coupled;
+- canonical source hash checks depend on exact upstream revisions;
+- behavior origin becomes difficult to trace.
+
+Disposition: rewrite from extracted requirements after stock modes are documented.
+
+### 5. Round lookup optimization
+
+Trauma attempts to cache changelevel detection and mode alias resolution.
+
+Disposition:
+
+- event-driven changelevel cache: adapt;
+- pure mode-resolution cache: adopt after invalidation tests;
+- lifecycle activation from a getter such as `CurrentRound()`: reject.
+
+### 6. Spawn contracts and validation
+
+Trauma introduces explicit team/FFA/solo contracts, named groups, nav requirements, safety checks, LOS-based opposing clusters, and persisted cache results.
+
+The concept is useful, but current behavior can fail open, reject previously playable maps, produce random validation results, and retain stale invalid caches.
+
+Disposition: rewrite after complete Z-City spawn documentation.
+
+### 7. Organism, medical, and health UI
+
+Trauma expands medical state, wounds, narcotics, infection, role behavior, screen effects, status text, inspection, and networking.
+
+The concepts must be inventoried individually. Monolithic UI/network/interaction files and broad detours are not accepted as architecture.
+
+Disposition: deferred until the vanilla organism and damage pipeline is documented.
+
+### 8. Bots and NPCs
+
+Trauma contains a large bot driver, behavior modules, mode bot files, debug tools, population management, NPC relations, a combatant abstraction, and VJ Base integration. A global bot-disabling autorun is also present.
+
+This indicates unresolved overlap between replacement and legacy bot systems.
+
+Disposition: deferred; do not port the global disable path or broad detours.
+
+### 9. Optional adapters
+
+- Glide: multiple adapters plus bundled source — reject bundling; design one optional adapter.
+- VJ Base: review focused files individually behind one capability boundary.
+- DynaBase/wOS: optional adapter only; core startup remains independent.
+- vFire: optional fire capability interface; reject vendor bundling.
+- Pathowogen: treat as an optional mode/content integration, not a required base.
+
+### 10. Self-testing and observability
+
+Trauma adds shared/client/server self-tests and performance reporting.
+
+Valid goals:
+
+- dependency availability;
+- registration/content checks;
+- runtime health;
+- smoke-test automation;
+- performance evidence.
+
+Risk: broad passing counts can certify registration while gameplay remains broken.
+
+Disposition: rewrite into separate static audits, production health checks, smoke tests, behavioral acceptance tests, and benchmarks.
+
+## Lifecycle dialects
+
+The snapshot uses multiple similarly named lifecycle events, including variants of:
+
+- `PlayerSpawn`;
+- `Player Spawn`;
+- `PlayerDeath`;
+- `Player_Death`;
+- `Org Think`;
+- `Org Clear`;
+- `ZB_PreRoundStart`;
+- `ZB_RoundStart`;
+- `RoundStateChange`.
+
+Some are intentional internal events. Others may be compatibility aliases or duplicate pathways. They must be traced by producer and consumer before consolidation.
+
+## Cross-cutting risks
+
+1. Multiple loaders initialize overlapping code.
+2. Filename ordering substitutes for declared dependencies.
+3. Legacy and replacement systems remain active together.
+4. Global API interception infers ownership incorrectly.
+5. Cleanup is incomplete across mode changes, map cleanup, refresh, disconnect, and shutdown.
+6. Client delivery may expose unnecessary implementation.
+7. Network receivers lack a central schema, direction, permission, and rate registry.
+8. Optional dependencies become effectively mandatory through bundling.
+9. Self-tests may validate structure rather than behavior.
+10. Compatibility guards can suppress errors while preserving invalid state.
+11. Runtime mutation makes it difficult to restore canonical definitions.
+12. Prototype-specific public names risk becoming permanent API debt.
+
+## Current overall disposition
+
+| Category | Disposition |
+|---|---|
+| Explicit identity and capabilities | Adapt |
+| Deterministic discovery | Adapt |
+| Mode ownership | Rewrite |
+| Generation guards | Adopt |
+| Custom gamemode framework | Rewrite from requirements |
+| Spawn framework | Deferred pending parity map |
+| Medical expansion | Inventory individually |
+| Bot/NPC expansion | Deferred pending foundation contracts |
+| Bundled third-party addons | Reject |
+| Optional adapters | Rewrite around capability boundaries |
+| Self-tests | Rewrite under evidence taxonomy |
 
 ## Next analysis targets
 
-1. Vanilla loader and initialization lifecycle.
-2. Trauma loader and all secondary loaders.
-3. Round/mode lifecycle from selection through cleanup.
-4. Player spawn, death, fake death, spectating, and respawn flow.
-5. Organism initialization and clearing.
-6. Hook/timer ownership implementation.
-7. Network registry and validation.
-8. Third-party/vendor boundary inventory.
+1. Complete player spawn/death/fake/spectator/respawn mapping.
+2. Enumerate direct hooks, timers, receivers, commands, and globals inside each stock mode.
+3. Map organism initialization, damage, clear, incapacitation, and death.
+4. Map weapon deploy, ADS, obstruction, firing, bullet, and damage dispatch.
+5. Inventory network messages by owner, realm, payload, validation, and frequency.
+6. Separate vendor code from adapters.
+7. Extract CustomGM requirements without carrying its runtime implementation.
