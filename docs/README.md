@@ -1,51 +1,74 @@
 # Z-City Refactor Documentation
 
-## Purpose
+## Start here
 
-This directory is the working specification for the Z-City Refactor. It separates verified behavior from proposed design and prevents Trauma experiments, comments, or inherited assumptions from being treated as authoritative.
+`BUILD_GUIDE.md` is the normative entry point for writing the new code.
 
-## Authority order
+The documentation separates four concerns:
 
-When documents disagree, use this order:
+1. exact source baselines and evidence;
+2. accepted target architecture;
+3. ordered implementation and test gates;
+4. prototype ideas that may or may not be retained.
 
-1. **Verified Z-City behavior** under `architecture/zcity/`.
-2. **Accepted architectural decisions** under `decisions/`.
-3. **Comparison ledger** under `architecture/comparison-ledger.md`.
-4. **Source inventories** under `architecture/sources/`.
-5. Planning and migration documents.
+## Authority
 
-Runtime code remains the ultimate evidence until behavior has an executable acceptance test.
+### Existing behavior
 
-## Canonical document tree
+Use the evidence hierarchy in `architecture/standards/evidence-and-testing.md` and the exact source registry in `architecture/source-baselines.md`.
 
-- `00_REFACTOR_METHOD.md` — investigation and migration rules.
-- `architecture/README.md` — architecture documentation index and current status.
-- `architecture/zcity/` — verified current and vanilla-derived behavior.
-- `architecture/zcity/verified-defects.md` — specific evidence-backed defects.
-- `architecture/sources/` — inventories and assessments of source material, including Trauma.
-- `architecture/comparison-ledger.md` — per-concept disposition ledger.
-- `architecture/data/` — machine-readable audit snapshots.
-- `decisions/` — architectural decision records.
+### Target design
 
-The duplicate early document trees were reconciled and removed on the working branch. New material must be added to the canonical paths above.
+Use this order:
 
-## Evidence labels
+1. accepted ADRs under `decisions/`;
+2. normative standards under `architecture/standards/`;
+3. `BUILD_GUIDE.md` and approved work packages;
+4. subsystem architecture documents;
+5. `architecture/comparison-ledger.md`;
+6. source inventories and prototype documentation.
 
-Every substantive claim should be identifiable as one of:
+Runtime code is the ultimate source fact until behavior is tied to a reproducible test. An ADR can change the target; it cannot change what the baseline code did.
 
-- **Verified** — confirmed against executable code or a reproducible test.
-- **Observed** — found by static inspection but not runtime-tested.
-- **Inferred** — a reasoned conclusion from observed behavior.
-- **Proposed** — a future design.
-- **Rejected** — reviewed and intentionally not selected.
+## Canonical tree
+
+- `BUILD_GUIDE.md` — implementation phases, gates, work-package requirements, and Definition of Done.
+- `00_REFACTOR_METHOD.md` — investigation and decision process.
+- `architecture/source-baselines.md` — exact meaning and identity of vanilla, destination, working, and Trauma sources.
+- `architecture/standards/` — cross-cutting normative rules.
+- `architecture/zcity/` — source-verified baseline behavior and upstream drift.
+- `architecture/zcity/verified-defects.md` — stable evidence-backed defects.
+- `architecture/sources/` — source inventories and bounded Trauma comparisons.
+- `architecture/comparison-ledger.md` — concept-level dispositions.
+- `architecture/data/` — machine-readable snapshots.
+- `decisions/` — accepted architectural decisions.
+
+Do not create additional top-level documentation trees for Trauma, modes, tests, or migration work. Add them under the canonical paths above.
+
+## Evidence vocabulary
+
+Use:
+
+- **TEST-VERIFIED**;
+- **RUNTIME-OBSERVED**;
+- **SOURCE-VERIFIED**;
+- **INFERRED**;
+- **CLAIMED**;
+- **PROPOSED**;
+- **REJECTED**;
+- **UNKNOWN**.
+
+Bare “Verified” in older documents means source-verified unless a runtime fixture or acceptance-test result is linked.
 
 ## Change rule
 
-No Trauma subsystem is ported merely because it is newer or more modular. A change must document:
+No Trauma subsystem, upstream commit, or apparent fix enters the new project merely because it is newer or more modular. Every implementation must identify:
 
-- the vanilla/current behavior it affects;
-- the defect or requirement being addressed;
-- the Trauma concept, if any, being considered;
-- the selected disposition: adopt, adapt, rewrite, reject, defer, or keep Z-City;
-- compatibility and rollback strategy;
-- acceptance tests.
+- exact source baseline;
+- defect or requirement;
+- current compatibility contract;
+- selected disposition;
+- authority and lifecycle owner;
+- test IDs;
+- rollout and rollback path;
+- legacy removal criteria.
