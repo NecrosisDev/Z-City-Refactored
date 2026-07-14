@@ -14,6 +14,7 @@
 hg.AdminTools = hg.AdminTools or {}
 
 local plyMeta = FindMetaTable("Player")
+local permissionHookErrorReported = false
 
 function plyMeta:ZCTools_GetAccess( bSAdmin ) 
     if bSAdmin and self:IsSuperAdmin() then return true end
@@ -22,7 +23,17 @@ function plyMeta:ZCTools_GetAccess( bSAdmin )
     -- Optional permission systems may grant access without replacing or
     -- hard-depending on Z-City's native admin checks. Returning anything
     -- other than true preserves the vanilla denial.
-    return hook.Run("ZCityAdminToolsAccess", self, bSAdmin) == true
+    local succeeded, granted = pcall(hook.Run, "ZCityAdminToolsAccess", self, bSAdmin)
+    if not succeeded then
+        if not permissionHookErrorReported then
+            permissionHookErrorReported = true
+            ErrorNoHaltWithStack("[Z-City] ZCityAdminToolsAccess failed: " .. tostring(granted) .. "\n")
+        end
+
+        return false
+    end
+
+    return granted == true
 end
 
 if CLIENT then
