@@ -26,6 +26,7 @@ No Trauma feature is accepted solely because it exists.
 - `zcity/boot-and-loading.md`
 - `zcity/mode-and-round-lifecycle.md`
 - `zcity/player-lifecycle.md`
+- `zcity/player-class-inventory-equipment-boundary.md`
 - `zcity/round-and-spectator-networking.md`
 - `zcity/organism-lifecycle-and-damage.md`
 - `zcity/fake-ragdoll-lifecycle.md`
@@ -70,6 +71,7 @@ The foundation research now includes:
 - current addon boot/load behavior;
 - current mode registration and round lifecycle;
 - gamemode-level player spawn, death, spectator, and respawn behavior;
+- the verified orchestration boundary between team assignment, inventory creation, direct spawn placement, round-reset class application, balancing, intermission, and mode equipment grants;
 - core round and spectator packet schemas, direction, authority, and late-join risks;
 - organism ownership, schema reset, simulation order, damage, incapacitation, replication, and cleanup contracts;
 - fake-ragdoll creation, identity, control, recovery, death conversion, vehicles, prediction, and cleanup contracts;
@@ -78,7 +80,7 @@ The foundation research now includes:
 - a structural Trauma inventory with reproducible snapshot identity;
 - a deep assessment of Trauma's lifecycle ownership attempt;
 - a weapon/combat assessment that separates weapon balance, obstruction, ragdoll combat, vehicles, projectiles, explosions, bots, and networking into independent decision areas;
-- organism-, fake-, and weapon-boundary dispositions for Trauma medical, networking, ownership, presentation, vehicle, and combat concepts;
+- organism-, fake-, weapon-, and character-admission-boundary dispositions for Trauma concepts;
 - formal decisions that Trauma is evidence rather than baseline and that character representation requires explicit authority;
 - concept-level dispositions in the comparison ledger;
 - removal of duplicate documentation trees.
@@ -88,14 +90,15 @@ The foundation research now includes:
 Work should proceed in this order:
 
 1. complete current-Z-City weapon publisher enumeration for `ishgweapon`, `RagdollFunc`, `IsPistolHoldType`, `IsResting`, `ismelee`, and `ismelee2`;
-2. player-class, movement, inventory, equipment, and mode-specific player lifecycle branches;
-3. weapon switch, drop, pickup, loadout, ammo, reload, and restoration ownership;
-4. ADS, ready stance, obstruction, authoritative fire origin, and vehicle free aim;
-5. hitscan, physical bullets, projectiles, penetration, damage dispatch, effects, and explosives;
-6. bot/NPC weapon capability publication and consumption;
-7. remaining medical-item and organism packet/NetVar consumers;
-8. map cleanup, shutdown, disconnect, and hot reload;
-9. complete network ownership and payload registry beyond the core round/spectator baseline;
-10. direct mode-resource, CustomGM requirement, adapter, and vendor-boundary inventories.
+2. enumerate every caller and implementation participating in `SetupTeam`, `CreateInv`, `SetPlayerClass`, mode `GiveEquipment`, `Intermission`, `DontKillPlayer`, `OverrideSpawn`, and `GetTeamSpawn`;
+3. complete movement and mode-specific player lifecycle branches;
+4. weapon switch, drop, pickup, loadout, ammo, reload, and restoration ownership;
+5. ADS, ready stance, obstruction, authoritative fire origin, and vehicle free aim;
+6. hitscan, physical bullets, projectiles, penetration, damage dispatch, effects, and explosives;
+7. bot/NPC weapon capability publication and consumption;
+8. remaining medical-item and organism packet/NetVar consumers;
+9. map cleanup, shutdown, disconnect, and hot reload;
+10. complete network ownership and payload registry beyond the core round/spectator baseline;
+11. direct mode-resource, CustomGM requirement, adapter, and vendor-boundary inventories.
 
 Production refactoring remains blocked until the relevant compatibility path has acceptance tests.
