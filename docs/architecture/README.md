@@ -25,6 +25,8 @@ No Trauma feature is accepted solely because it exists.
 
 - `zcity/boot-and-loading.md`
 - `zcity/mode-and-round-lifecycle.md`
+- `zcity/player-lifecycle.md`
+- `zcity/round-and-spectator-networking.md`
 - `zcity/verified-defects.md`
 
 ### Trauma evidence
@@ -57,29 +59,32 @@ A change should not enter the new project without:
 
 ## Current completed scope
 
-The first foundation pass now includes:
+The foundation research now includes:
 
 - documentation authority and evidence rules;
 - current addon boot/load behavior;
 - current mode registration and round lifecycle;
+- gamemode-level player spawn, death, spectator, and respawn behavior;
+- core round and spectator packet schemas, direction, authority, and late-join risks;
 - a specific foundation defect register;
 - a structural Trauma inventory with reproducible snapshot identity;
 - a deep assessment of Trauma's lifecycle ownership attempt;
 - a formal decision that Trauma is evidence rather than baseline;
-- initial concept-level dispositions in the comparison ledger;
+- concept-level dispositions in the comparison ledger;
 - removal of duplicate documentation trees.
 
 ## Next behavioral spine
 
 Work should proceed in this order:
 
-1. player initial spawn, spawn selection, round reset, death, fake death, spectating, and respawn;
-2. organism initialization, damage, incapacitation, clearing, and death;
-3. weapon deploy, input, ADS, obstruction, firing, projectile/bullet, and damage dispatch;
-4. map cleanup, shutdown, disconnect, and hot reload;
-5. network ownership and payload registry;
-6. direct mode-resource inventory;
-7. CustomGM requirement extraction;
-8. adapter and vendor-boundary inventory.
+1. organism initialization, damage, incapacitation, clearing, replication, and death;
+2. fake-ragdoll state, player/character authority, incapacitation, combat, and recovery;
+3. player-class, inventory, equipment, and mode-specific player lifecycle branches;
+4. weapon deploy, input, ADS, obstruction, firing, projectile/bullet, and damage dispatch;
+5. map cleanup, shutdown, disconnect, and hot reload;
+6. complete network ownership and payload registry beyond the core round/spectator baseline;
+7. direct mode-resource inventory;
+8. CustomGM requirement extraction;
+9. adapter and vendor-boundary inventory.
 
 Production refactoring remains blocked until the relevant compatibility path has acceptance tests.
