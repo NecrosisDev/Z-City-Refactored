@@ -107,6 +107,46 @@ This register contains defects established by direct static inspection of the cu
 - **Impact:** Earlier files remain registered after later foundational failures, producing a partially initialized addon.
 - **Disposition:** Do not merely wrap every include and continue. Define required phases, fail-closed critical modules, optional module isolation, and structured diagnostics.
 
+## ZC-FND-014 — First-player admission terminates the round and creates a bot
+
+- **Area:** Player admission
+- **Source:** `GM:PlayerInitialSpawn` in `gamemodes/zcity/gamemode/init.lua`
+- **Observed:** The first connected player causes the server to execute `bot`, set a global bootstrap flag, and call `zb:EndRound()`.
+- **Impact:** Connection handling unexpectedly mutates population and round state, complicating empty-server startup and late initialization.
+- **Disposition:** Preserve until runtime-tested; then move temporary population/bootstrap policy into an explicit server lifecycle service.
+
+## ZC-FND-015 — Engine spawn selection is bypassed
+
+- **Area:** Spawn lifecycle
+- **Source:** `gamemodes/zcity/gamemode/init.lua`
+- **Observed:** `GM:PlayerSelectSpawn` is empty while a separate local function directly calls `SetPos` during `PLAYER:SetupTeam`.
+- **Impact:** Team assignment, inventory creation, spawn policy, and teleportation are tightly coupled and bypass the normal spawn-selection contract.
+- **Disposition:** Record mode parity, then introduce explicit resolve/validate/reserve/place phases behind compatibility wrappers.
+
+## ZC-FND-016 — Random-spawn fallback can select unsuitable positions
+
+- **Area:** Spawn validation
+- **Source:** `zb:FurthestFromEveryone` in `gamemodes/zcity/gamemode/init.lua`
+- **Observed:** Candidate checks consider only distance from alive players; after tolerance passes fail, the function returns a random candidate without validating it.
+- **Impact:** Crowded, blocked, hazardous, or otherwise invalid positions can still be selected.
+- **Disposition:** Preserve fallback behavior until mode tests exist; add structured validation reasons and a deterministic emergency policy.
+
+## ZC-FND-017 — Death uses uncancellable anonymous delayed work
+
+- **Area:** Death and spectating
+- **Source:** `GM:PlayerDeath` in `gamemodes/zcity/gamemode/init.lua`
+- **Observed:** A `timer.Simple(0.1, ...)` callback selects a spectator target after death.
+- **Impact:** The task cannot be enumerated, cancelled, or attributed during rapid respawn, disconnect, mode changes, or hot reload.
+- **Disposition:** Replace through an owned delayed-task API with player and round-generation guards.
+
+## ZC-FND-018 — Spectator exit restores a hard-coded team
+
+- **Area:** Spectator state
+- **Source:** `ZB_SpecMode` receiver in `gamemodes/zcity/gamemode/init.lua`
+- **Observed:** Leaving spectator mode assigns team `1` rather than consulting the active mode or team-balancing policy.
+- **Impact:** Team-based, asymmetric, or mode-specific admission can be bypassed or temporarily corrupted.
+- **Disposition:** Route spectator exit through an authoritative mode admission policy while preserving current behavior until tests exist.
+
 ## Verification policy
 
 A defect can be closed only when:
