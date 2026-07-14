@@ -18,8 +18,11 @@ local plyMeta = FindMetaTable("Player")
 function plyMeta:ZCTools_GetAccess( bSAdmin ) 
     if bSAdmin and self:IsSuperAdmin() then return true end
     if not bSAdmin and self:IsAdmin() then return true end
-    
-    return false
+
+    -- Optional permission systems may grant access without replacing or
+    -- hard-depending on Z-City's native admin checks. Returning anything
+    -- other than true preserves the vanilla denial.
+    return hook.Run("ZCityAdminToolsAccess", self, bSAdmin) == true
 end
 
 if CLIENT then
@@ -45,8 +48,7 @@ if CLIENT then
         size = 72/3, 
         extended = true, 
         weight = 650,
-        antialias = true,
-        italic = true
+        antialias = true
     })
 end
 
@@ -77,29 +79,25 @@ function hg.AdminTools:Timer( str, time )
                     surface.PlaySound("buttons/blip1.wav")
                     played = true
                 end
-				return
-			end
+                return
+            end
             played = false
         else
             Timer = time - CurTime()
         end
         
         local TDisp = string.FormattedTime( Timer, "%02i:%02i.%02i" )
-
         local random = 1 - (Timer / RTimer)
-		local x, y = math.random() * random * 1, math.random() * random * 2
+        local x, y = math.random() * random * 1, math.random() * random * 2
         local pos = ScrW() - w/1.5
         draw.RoundedBox(0, pos - w / 2 + 10 + x, 30 + y, w, h, ColorAlpha(color_black_alpha,150*FirstTime))
         draw.RoundedBox(0, pos - w / 2 + 10 + x, 30 + y, w * (1 - (Timer / RTimer)), h, Color(150, 50, 40, 150*FirstTime))
-
         draw.SimpleText(TDisp, "timer_Font", pos + x+4, 30 + y+4, ColorAlpha(color_black_alpha,150*FirstTime), 1)
         draw.SimpleText(TDisp, "timer_Font", pos + x, 30 + y, ColorAlpha(color_white,255*FirstTime), 1)
-
         draw.RoundedBox(0, pos - w / 2 + 10 + x, 30 + h + y, w, 30, ColorAlpha(color_black_alpha,150*FirstTime))
         draw.SimpleText(Text, "timer_Font1", pos - x + 2, 30 + h + y + 2, ColorAlpha(color_black_alpha,150*FirstTime), 1)
         draw.SimpleText(Text, "timer_Font1", pos - x, 30 + h + y, ColorAlpha(color_white,255*FirstTime), 1)
     end)
-
 end
 
 --hg.AdminTools:Timer( "Survive", CurTime()+2 )
