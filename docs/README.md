@@ -42,8 +42,9 @@ Runtime code is the ultimate source fact until behavior is tied to a reproducibl
 - `architecture/comparison-ledger.md` — concept-level dispositions.
 - `architecture/data/` — machine-readable snapshots.
 - `decisions/` — accepted architectural decisions.
+- `implementation/` — work packages, test specifications, and traceability.
 
-Do not create additional top-level documentation trees for Trauma, modes, tests, or migration work. Add them under the canonical paths above.
+Do not create additional top-level documentation trees outside the canonical structure above.
 
 ## Evidence vocabulary
 
