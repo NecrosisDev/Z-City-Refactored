@@ -35,6 +35,7 @@ No Trauma feature is accepted solely because it exists.
 
 - `sources/trauma-inventory.md`
 - `sources/trauma-lifecycle-assessment.md`
+- `sources/trauma-weapon-combat-assessment.md`
 - `data/trauma-snapshot-2026-07-14.json`
 
 ### Decisions and migration control
@@ -74,7 +75,8 @@ The foundation research now includes:
 - a specific foundation defect register;
 - a structural Trauma inventory with reproducible snapshot identity;
 - a deep assessment of Trauma's lifecycle ownership attempt;
-- organism- and fake-level dispositions for Trauma medical, networking, ownership, presentation, vehicle, and combat concepts;
+- a preliminary weapon/combat assessment that separates weapon balance, obstruction, ragdoll combat, vehicles, projectiles, explosions, bots, and networking into independent decision areas;
+- organism-, fake-, and weapon-boundary dispositions for Trauma medical, networking, ownership, presentation, vehicle, and combat concepts;
 - formal decisions that Trauma is evidence rather than baseline and that character representation requires explicit authority;
 - concept-level dispositions in the comparison ledger;
 - removal of duplicate documentation trees.
@@ -83,14 +85,15 @@ The foundation research now includes:
 
 Work should proceed in this order:
 
-1. player-class, movement, inventory, equipment, and mode-specific player lifecycle branches;
-2. fake-ragdoll combat and weapon ownership consumers;
-3. remaining medical-item and organism packet/NetVar consumers;
-4. weapon deploy, input, ADS, obstruction, firing, projectile/bullet, and damage dispatch;
-5. map cleanup, shutdown, disconnect, and hot reload;
-6. complete network ownership and payload registry beyond the core round/spectator baseline;
-7. direct mode-resource inventory;
-8. CustomGM requirement extraction;
-9. adapter and vendor-boundary inventory.
+1. exact current-Z-City weapon source enumeration, including `ishgweapon`, `RagdollFunc`, `IsPistolHoldType`, `IsResting`, `ismelee`, and `ismelee2` publishers and consumers;
+2. player-class, movement, inventory, equipment, and mode-specific player lifecycle branches;
+3. fake-ragdoll combat and weapon ownership consumers;
+4. remaining medical-item and organism packet/NetVar consumers;
+5. weapon deploy, input, ADS, obstruction, firing, projectile/bullet, ammo, and damage dispatch;
+6. map cleanup, shutdown, disconnect, and hot reload;
+7. complete network ownership and payload registry beyond the core round/spectator baseline;
+8. direct mode-resource inventory;
+9. CustomGM requirement extraction;
+10. adapter and vendor-boundary inventory.
 
 Production refactoring remains blocked until the relevant compatibility path has acceptance tests.
