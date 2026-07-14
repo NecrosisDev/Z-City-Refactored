@@ -35,9 +35,10 @@ Earlier bare “vanilla/current Z-City” wording is deprecated.
 - `standards/runtime-ownership-and-generations.md`
 - `comparison-ledger.md`
 
-### Z-City baseline and upstream evidence
+### Z-City baseline, contracts, and upstream evidence
 
-- `zcity/boot-and-loading.md`
+- `zcity/boot-and-loading.md` — destination loader behavior.
+- `zcity/boot-content-and-dependency-contract.md` — destination/upstream/Trauma comparison, target contract, requirements, and tests.
 - `zcity/mode-and-round-lifecycle.md`
 - `zcity/mode-method-dispatch-and-hot-reload.md`
 - `zcity/mode-contract-and-resource-ownership.md`
@@ -78,6 +79,7 @@ Unless explicitly stated otherwise, the older Z-City documents are source-verifi
 Completed enough to guide continued analysis:
 
 - boot and realm loading;
+- boot/content/dependency target contract with eight requirements and ten acceptance tests;
 - mode/round lifecycle and loader boundaries;
 - player admission and round-reset orchestration;
 - round/spectator networking baseline;
@@ -89,6 +91,8 @@ Completed enough to guide continued analysis:
 Not yet complete enough for broad replacement:
 
 - executable acceptance harness;
+- exhaustive boot listener, realm, and lexical-order inventory;
+- exact Trauma Clean dependency-bootstrap side-effect trace;
 - exhaustive stock-mode method/resource inventory;
 - complete weapon publisher/consumer and fire graph;
 - complete network registry and trust-boundary matrix;
