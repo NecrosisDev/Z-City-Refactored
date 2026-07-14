@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-14",
+  "sources": {
+    "upstream_vanilla": {
+      "archive": "Z-City.zip",
+      "sha256": "8b67e8b362a7c07563a6e957632de1f2727a170fb65336ec4c5d18930d700487",
+      "archive_bytes": 9842319,
+      "root": "Z-City",
+      "git_commit": "3716789311f726174e1255f8b93fe1b28e619f6d",
+      "non_git_file_count": 931,
+      "lua_file_count": 899,
+      "lua_source_bytes": 6894163,
+      "working_tree_note": "Line-ending conversion marks source files modified. Ignoring end-of-line changes, only .github/ISSUE_TEMPLATE/bug_report.md is absent; runtime source is equivalent to the recorded commit for this audit."
+    },
+    "destination_baseline": {
+      "repository": "NecrosisDev/Z-City-Refactored",
+      "git_commit": "429ec928203cec963176dfb6afd086dcdd01c181",
+      "relationship_to_upstream_vanilla": "ancestor"
+    },
+    "trauma_current": {
+      "archive": "Trauma_Clean.zip",
+      "sha256": "03d6b1b917ebd33ba0a472dbc7ecf09118eb743aaadbbdd8dab1505476dc13f8",
+      "archive_bytes": 7133204,
+      "root": "Trauma_Clean",
+      "file_count": 1289,
+      "lua_file_count": 1035,
+      "lua_source_bytes": 8850553,
+      "registrations": {
+        "hook_add_calls": 1173,
+        "timer_create_calls": 93,
+        "timer_simple_calls": 559,
+        "timer_remove_calls": 100,
+        "network_string_declarations": 327,
+        "net_receive_calls": 340,
+        "net_start_calls": 467,
+        "server_convar_calls": 240,
+        "client_convar_calls": 121,
+        "console_command_calls": 207,
+        "file_write_calls": 45
+      },
+      "literal_duplicate_groups": {
+        "network_string_declarations": 5,
+        "net_receivers": 30,
+        "hook_event_identifier_pairs": 7,
+        "convars": 29,
+        "named_timers": 5
+      }
+    },
+    "trauma_historical": {
+      "archive": "Trauma.zip",
+      "sha256": "0286d0f25f9744cc6387e8676e9429ef11a8991bbad6bda45961f4358b534652",
+      "archive_bytes": 4425563,
+      "root": "TMod",
+      "file_count": 1040,
+      "lua_file_count": 1028,
+      "status": "superseded_for_implementation_guidance"
+    }
+  },
+  "trauma_delta": {
+    "added_files": 249,
+    "removed_files": 0,
+    "changed_files": 197,
+    "added_lua_files": 7,
+    "removed_lua_files": 0,
+    "changed_lua_files": 197,
+    "registration_delta": {
+      "hook_add_calls": 23,
+      "timer_create_calls": 3,
+      "timer_simple_calls": 13,
+      "network_string_declarations": 0,
+      "net_receive_calls": 0,
+      "net_start_calls": 2,
+      "server_convar_calls": 4,
+      "client_convar_calls": 2,
+      "console_command_calls": 7,
+      "file_write_calls": 3
+    }
+  },
+  "notes": [
+    "Registration counts are static lexical observations and include inherited, vendor, dead, commented, or realm-paired code.",
+    "Duplicate literal groups are review leads, not automatic defects.",
+    "Runtime parity requires evidence defined by docs/architecture/standards/evidence-and-testing.md."
+  ]
+}
