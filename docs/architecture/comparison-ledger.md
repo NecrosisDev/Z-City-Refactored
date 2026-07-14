@@ -38,14 +38,20 @@ Each resolved row must eventually link to:
 | Mode lifecycle | Explicit activation, deactivation, generation, and diagnostics | Adapt | The lifecycle model is valid. Final APIs must use Z-City ownership scopes. See `sources/trauma-lifecycle-assessment.md`. |
 | Hook ownership | Capture mode hooks and remove them on deactivation | Rewrite | Required capability, but Trauma's temporary replacement of global `hook.Add` is rejected. Use explicit owner APIs. |
 | Timer ownership | Capture named timers and generation-guard simple timers | Rewrite | Required capability. Anonymous delayed work must receive cancellable owned IDs; global timer interception is rejected. |
-| Generation guards | Ignore delayed callbacks from inactive mode generations | Adopt | Low-cost protection with clear semantics; integrate into owned tasks, death/spectator delays, packet sequencing, organism owner transfers, representation changes, weapon transactions, and asynchronous completions. |
+| Generation guards | Ignore delayed callbacks from inactive mode generations | Adopt | Low-cost protection with clear semantics; integrate into owned tasks, death/spectator delays, packet sequencing, organism owner transfers, representation changes, weapon transactions, character admission, and asynchronous completions. |
 | Persistent hooks | Hard-coded event allowlist remains global | Reject | Lifetime must be declared per resource, not inferred from event name. |
 | Static registration capture | Loader captures registrations made by mode files | Deferred | May be useful as temporary migration/audit tooling, not as permanent runtime architecture. |
-| Lifecycle diagnostics | Active mode, generation, hook and timer counts | Adapt | Expand with owner, source, realm, lifetime, replacement history, player/organism/representation lifecycle phase, packet generation, and leak reporting. |
+| Lifecycle diagnostics | Active mode, generation, hook and timer counts | Adapt | Expand with owner, source, realm, lifetime, replacement history, player/organism/representation/admission lifecycle phase, packet generation, and leak reporting. |
 | Legacy mode dispatcher | Mode-table function names automatically become hook handlers | Keep Z-City temporarily | Preserve behavior until every mode method is classified. Replace only behind parity tests. |
 | Active registries | Dense array plus reverse-position map and pruning | Adapt | Useful collection primitive. Encapsulate live storage, declare ordering semantics, and separate lifecycle ownership. |
 | Self-tests | Shared/server/client command-driven diagnostics | Rewrite | Keep the concept but separate static audit, production health checks, smoke tests, behavioral tests, and performance tests. |
 | Player lifecycle tracing | Additional lifecycle diagnostics and ownership tracking | Adapt | Add observational per-player phase tracing first. Do not replace spawn/death/spectator authority until parity tests pass. |
+| Character admission | Expanded class, inventory, loadout, spawn, and lifecycle coordination | Rewrite | Current Z-City splits team, inventory, teleport, class, balancing, intermission, and equipment across multiple owners. Define one ordered server-authoritative admission transaction rather than porting another parallel coordinator. See `zcity/player-class-inventory-equipment-boundary.md`. |
+| Character admission diagnostics | Per-player setup state, validation, and failure reporting | Adapt | Preserve bounded phase tracing, generation, plan/result records, and invariant checks without exposing private inventory or class data to unauthorized clients. |
+| Player class definitions | Expanded data-driven class and organism customization | Deferred | The concept is useful, but current class schema, all publishers, mode overrides, movement effects, organism presets, appearance, and replication must be enumerated first. |
+| Inventory construction | Expanded inventories, loadouts, items, and persistence | Deferred | `hg.CreateInv` is proven lifecycle-critical, but its definition, persistence, death/drop/disconnect behavior, and mode consumers remain unenumerated. |
+| Equipment grant orchestration | Additional loadout/equipment systems and mode integrations | Rewrite | Preserve mode-owned outcomes and current order after balancing/intermission, but replace distributed direct grants with an explicit equipment plan committed by character admission/round reset. |
+| Preserved-player reset | Additional lifecycle preservation and state transfer behavior | Rewrite | `DontKillPlayer` currently bypasses kill, respawn, and round-reset class application. Each mode requires fixtures before a unified preserved-player refresh contract can replace it. |
 | Late-join synchronization | Expanded state synchronization across custom systems | Rewrite | Current synchronization is fragmented, while Trauma adds more channels. Define one versioned server-authoritative snapshot with ordered subsystem contributors and a completion contract. |
 | Round snapshot | Multiple state and timing updates across channels | Rewrite | Replace fragmented mode/state/timing delivery with one sequenced snapshot. Preserve `RoundInfo` and `updtime` as compatibility projections until clients and modes migrate. |
 | Packet metadata | Broader schema and ownership concepts across Trauma networking | Adapt | Adopt explicit owner, direction, schema version, rate policy, authority, and generation metadata; do not port Trauma's network surface wholesale. |
@@ -95,9 +101,11 @@ Each resolved row must eventually link to:
 - `zcity/boot-and-loading.md`
 - `zcity/mode-and-round-lifecycle.md`
 - `zcity/player-lifecycle.md`
+- `zcity/player-class-inventory-equipment-boundary.md`
 - `zcity/round-and-spectator-networking.md`
 - `zcity/organism-lifecycle-and-damage.md`
 - `zcity/fake-ragdoll-lifecycle.md`
+- `zcity/weapon-and-combat-interfaces.md`
 - `zcity/verified-defects.md`
 - `sources/trauma-inventory.md`
 - `sources/trauma-lifecycle-assessment.md`
@@ -112,14 +120,14 @@ No gameplay subsystem will be ported until these flows are documented and assign
 
 1. addon boot and load order;
 2. gamemode selection and round lifecycle;
-3. player initial spawn, spawn, death, fake death, spectating, and respawn;
+3. player initial spawn, spawn, death, fake death, spectating, respawn, class, inventory, and equipment;
 4. organism initialization, damage, clearing, incapacitation, and death;
 5. weapon deployment, aiming, obstruction, firing, and damage dispatch;
 6. map cleanup, shutdown, and hot-reload behavior.
 
 Core organism ownership, reset, simulation, damage, incapacitation, death, and replication are mapped. Item 4 still requires exhaustive medical-item consumers, packet/NetVar consumers, runtime phase/load-order evidence, and combined fake-ragdoll/movement/class integration tests.
 
-The ordinary player lifecycle, round/spectator network contracts, and core fake-ragdoll representation lifecycle are mapped. Item 3 still requires player-class, movement, inventory, equipment, weapon, and mode-specific branches plus runtime transition fixtures.
+The ordinary player lifecycle, round/spectator network contracts, core fake-ragdoll representation lifecycle, and top-level class/inventory/equipment orchestration boundary are mapped. Item 3 still requires exact `CreateInv` and `SetPlayerClass` definitions/consumers, every mode-specific lifecycle branch, movement integration, replication, cleanup, and runtime transition fixtures.
 
 Weapon-related Trauma concepts now have a preliminary bounded disposition, but item 5 remains blocked on exact current-Z-City source enumeration. No weapon implementation is accepted from Trauma before that graph exists.
 
