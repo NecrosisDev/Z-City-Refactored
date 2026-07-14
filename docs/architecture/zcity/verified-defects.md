@@ -147,6 +147,46 @@ This register contains defects established by direct static inspection of the cu
 - **Impact:** Team-based, asymmetric, or mode-specific admission can be bypassed or temporarily corrupted.
 - **Disposition:** Route spectator exit through an authoritative mode admission policy while preserving current behavior until tests exist.
 
+## ZC-FND-019 — Round state and timing are transmitted as independent generations
+
+- **Area:** Round networking
+- **Sources:** `RoundInfo` and `updtime` send/receive paths
+- **Observed:** Mode/state and timing values are sent through separate unversioned messages with no shared sequence or round-generation identifier.
+- **Impact:** Clients can temporarily combine a new mode/state with stale timing, or new timing with stale mode/state, especially during late join or packet reordering.
+- **Disposition:** Introduce one sequenced round snapshot while preserving legacy packets during migration.
+
+## ZC-FND-020 — Late-join synchronization has no complete snapshot contract
+
+- **Area:** Player synchronization
+- **Source:** `zb_SendRoundInfo` initial-spawn hook
+- **Observed:** The hook conditionally sends `RoundInfo` and calls `ply:SyncVars()`, but the inspected path does not explicitly send current `updtime` or mark synchronization complete.
+- **Impact:** Joining clients can render partial or mixed subsystem state without knowing whether initialization is complete.
+- **Disposition:** Define a versioned late-join snapshot with ordered contributors and an explicit completion acknowledgement/state.
+
+## ZC-FND-021 — Spectator authority is duplicated across net messages and NWVars
+
+- **Area:** Spectator networking
+- **Sources:** `ZB_SpectatePlayer`, `PlayerDeathThink`, and client camera code
+- **Observed:** Immediate spectator target/view state is sent through a dedicated packet, while persistent state is also published through `NWEntity("spect")` and `NWInt("viewmode")`.
+- **Impact:** The two paths can disagree, update at different rates, and apply stale state after target change, respawn, disconnect, or hot reload.
+- **Disposition:** Select one authoritative representation and retain the other only as a compatibility projection.
+
+## ZC-FND-022 — Spectator client requests lack explicit rate policy and bounded enums
+
+- **Area:** Client-originated networking
+- **Sources:** `ZB_ChooseSpecPly` and `ZB_SpecMode` receivers
+- **Observed:** The server accepts a raw signed 32-bit input constant or a boolean with no visible rate limiter, sequence, expected-state token, or small validated request enum.
+- **Impact:** Modified clients can generate unnecessary server work and race spectator transitions; invalid values are silently ignored rather than diagnosed.
+- **Disposition:** Add per-action rate limits, bounded request schemas, expected-state/generation checks, and structured rejection reasons.
+
+## ZC-FND-023 — Spectator presentation uses additional uncancellable delayed client work
+
+- **Area:** Client lifecycle
+- **Source:** `ZB_SpectatePlayer` receiver in `gamemodes/zcity/gamemode/cl_init.lua`
+- **Observed:** The receiver schedules `timer.Simple(0.1)` to mutate hull and movement state without an owned identifier or player-generation guard.
+- **Impact:** A delayed callback can apply after respawn, a newer spectator response, Lua refresh, or mode transition.
+- **Disposition:** Replace with an owned client task or immediate idempotent state application guarded by spectator generation.
+
 ## Verification policy
 
 A defect can be closed only when:
