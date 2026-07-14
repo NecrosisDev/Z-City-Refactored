@@ -27,6 +27,7 @@ No Trauma feature is accepted solely because it exists.
 - `zcity/mode-and-round-lifecycle.md`
 - `zcity/player-lifecycle.md`
 - `zcity/round-and-spectator-networking.md`
+- `zcity/organism-lifecycle-and-damage.md`
 - `zcity/verified-defects.md`
 
 ### Trauma evidence
@@ -66,9 +67,11 @@ The foundation research now includes:
 - current mode registration and round lifecycle;
 - gamemode-level player spawn, death, spectator, and respawn behavior;
 - core round and spectator packet schemas, direction, authority, and late-join risks;
+- organism ownership, schema reset, simulation order, damage, incapacitation, replication, and cleanup contracts;
 - a specific foundation defect register;
 - a structural Trauma inventory with reproducible snapshot identity;
 - a deep assessment of Trauma's lifecycle ownership attempt;
+- organism-level dispositions for Trauma medical, networking, ownership, and presentation concepts;
 - a formal decision that Trauma is evidence rather than baseline;
 - concept-level dispositions in the comparison ledger;
 - removal of duplicate documentation trees.
@@ -77,9 +80,9 @@ The foundation research now includes:
 
 Work should proceed in this order:
 
-1. organism initialization, damage, incapacitation, clearing, replication, and death;
-2. fake-ragdoll state, player/character authority, incapacitation, combat, and recovery;
-3. player-class, inventory, equipment, and mode-specific player lifecycle branches;
+1. fake-ragdoll state, player/character authority, incapacitation, combat, recovery, vehicles, and removal;
+2. player-class, inventory, equipment, and mode-specific player lifecycle branches;
+3. remaining medical-item and organism packet/NetVar consumers;
 4. weapon deploy, input, ADS, obstruction, firing, projectile/bullet, and damage dispatch;
 5. map cleanup, shutdown, disconnect, and hot reload;
 6. complete network ownership and payload registry beyond the core round/spectator baseline;
