@@ -42,6 +42,7 @@ No Trauma feature is accepted solely because it exists.
 - `comparison-ledger.md`
 - `../decisions/ADR-0001-EXPLICIT_MODE_LIFECYCLE_OWNERSHIP.md`
 - `../decisions/ADR-0002-TRAUMA_IS_EVIDENCE_NOT_BASELINE.md`
+- `../decisions/ADR-0003-EXPLICIT_CHARACTER_REPRESENTATION_STATE.md`
 
 ## Required evidence for implementation
 
@@ -74,7 +75,7 @@ The foundation research now includes:
 - a structural Trauma inventory with reproducible snapshot identity;
 - a deep assessment of Trauma's lifecycle ownership attempt;
 - organism- and fake-level dispositions for Trauma medical, networking, ownership, presentation, vehicle, and combat concepts;
-- a formal decision that Trauma is evidence rather than baseline;
+- formal decisions that Trauma is evidence rather than baseline and that character representation requires explicit authority;
 - concept-level dispositions in the comparison ledger;
 - removal of duplicate documentation trees.
 
