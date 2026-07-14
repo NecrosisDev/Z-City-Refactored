@@ -13,8 +13,9 @@ Use these for new work:
 
 1. `trauma-clean-inventory.md` — current structural inventory and archive delta.
 2. `trauma-mode-lifecycle-comparison.md` — current canonical bounded lifecycle comparison.
-3. `../comparison-ledger.md` — concept disposition.
-4. accepted ADRs and an approved work package — implementation authority.
+3. `trauma-networking-assessment.md` — current structural network attempt families, dispositions, trust risks, and unresolved endpoint evidence.
+4. `../comparison-ledger.md` — concept disposition.
+5. accepted ADRs and an approved work package — implementation authority.
 
 ## Historical assessments
 
