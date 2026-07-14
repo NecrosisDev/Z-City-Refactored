@@ -97,6 +97,22 @@ Do not recreate the previous broad facade/registry architecture merely because i
 
 **Status:** verified repository boundary; supersedes any prior implication that the archived refactor implementation is already present on `main`.
 
+### TZ-007 — Admin permission integration uses one native access seam
+
+**Trauma intent:** allow external administration systems and custom usergroups, including ULX/ULib-managed groups, to use Z-City administration features.
+
+**Verified vanilla ownership:** `lua/homigrad/admintools/sh_init.lua` defines `Player:ZCTools_GetAccess`, while `lua/homigrad/admintools/sh_player_properties.lua` calls that method from every inspected C-menu property filter before server-side actions execute. Vanilla access is therefore centralized around `IsAdmin` and `IsSuperAdmin`; the properties themselves are not owned by ULX.
+
+**Observed gap:** a custom group that is meaningful to an external permission system but does not satisfy Garry's Mod's native `IsAdmin`/`IsSuperAdmin` checks cannot see or invoke these properties. Replacing every property filter or making ULX mandatory would duplicate policy and couple core admin tools to one vendor.
+
+**Decision:** preserve the native checks and add one shared extension hook, `ZCityAdminToolsAccess(player, superAdminRequired)`. An optional adapter may return literal `true` to grant access. Missing adapters, nil returns, errors outside the hook, or explicit false values do not alter vanilla denial. The hook is evaluated by the same method on client and server, so an adapter must provide matching shared policy; server-side property filters remain authoritative.
+
+**Implemented refinement:** `Player:ZCTools_GetAccess` now checks native admin state first, then accepts only `hook.Run("ZCityAdminToolsAccess", self, bSAdmin) == true`. No ULX/ULib code, group names, or vendor APIs were added.
+
+**Static verification:** the existing property actions still route through `ZCTools_GetAccess`; native admin and superadmin behavior is unchanged; absent adapters evaluate to false; the change adds no network strings or receivers. Live Garry's Mod verification with a custom permission adapter remains required before claiming external-group support.
+
+**Status:** implemented as a dependency-free integration seam; vendor-specific adapter remains separate and unapproved.
+
 ## Rejected approaches
 
 The following are not justified for the refactor:
@@ -108,10 +124,11 @@ The following are not justified for the refactor:
 - expanding audits or documentation without a named subsystem migration that consumes the result;
 - enabling vehicle injury tuning before live server validation;
 - treating archived generated diffs, ZIP handoffs, or guidestones as current repository implementation;
-- rebuilding the entire prior refactor scaffolding before a concrete gameplay migration requires it.
+- rebuilding the entire prior refactor scaffolding before a concrete gameplay migration requires it;
+- scattering vendor permission checks throughout individual C-menu properties.
 
 ## Next bounded migration candidate
 
-The next implementation must begin from one verified vanilla owner file on the current branch. The strongest candidate remains optional integration hardening, but no adapter should be written until its actual vanilla interaction point and Trauma counterpart are both identified. The deliverable should be one dependency-safe adapter or one explicit rejection decision—not another general inventory framework.
+The permission seam is complete at the Z-City ownership boundary. The next run should either inspect one exact optional permission provider and build a separately loadable adapter with matched client/server behavior, or reject that provider if its available API cannot support deterministic shared checks. It must not broaden into a general permissions framework.
 
-No production Lua behavior has been changed by this decision register.
+Production Lua changed only at the verified `ZCTools_GetAccess` owner. No property implementation, network protocol, round behavior, organism behavior, or vendor dependency was modified.
