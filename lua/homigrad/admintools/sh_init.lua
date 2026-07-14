@@ -48,7 +48,8 @@ if CLIENT then
         size = 72/3, 
         extended = true, 
         weight = 650,
-        antialias = true
+        antialias = true,
+        italic = true
     })
 end
 
