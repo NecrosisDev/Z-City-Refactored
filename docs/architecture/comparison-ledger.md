@@ -38,15 +38,21 @@ Each resolved row must eventually link to:
 | Mode lifecycle | Explicit activation, deactivation, generation, and diagnostics | Adapt | The lifecycle model is valid. Final APIs must use Z-City ownership scopes. See `sources/trauma-lifecycle-assessment.md`. |
 | Hook ownership | Capture mode hooks and remove them on deactivation | Rewrite | Required capability, but Trauma's temporary replacement of global `hook.Add` is rejected. Use explicit owner APIs. |
 | Timer ownership | Capture named timers and generation-guard simple timers | Rewrite | Required capability. Anonymous delayed work must receive cancellable owned IDs; global timer interception is rejected. |
-| Generation guards | Ignore delayed callbacks from inactive mode generations | Adopt | Low-cost protection with clear semantics; integrate into owned tasks and asynchronous completions. |
+| Generation guards | Ignore delayed callbacks from inactive mode generations | Adopt | Low-cost protection with clear semantics; integrate into owned tasks, death/spectator delays, and asynchronous completions. |
 | Persistent hooks | Hard-coded event allowlist remains global | Reject | Lifetime must be declared per resource, not inferred from event name. |
 | Static registration capture | Loader captures registrations made by mode files | Deferred | May be useful as temporary migration/audit tooling, not as permanent runtime architecture. |
-| Lifecycle diagnostics | Active mode, generation, hook and timer counts | Adapt | Expand with owner, source, realm, lifetime, replacement history, and leak reporting. |
+| Lifecycle diagnostics | Active mode, generation, hook and timer counts | Adapt | Expand with owner, source, realm, lifetime, replacement history, player lifecycle phase, and leak reporting. |
 | Legacy mode dispatcher | Mode-table function names automatically become hook handlers | Keep Z-City temporarily | Preserve behavior until every mode method is classified. Replace only behind parity tests. |
 | Active registries | Dense array plus reverse-position map and pruning | Adapt | Useful collection primitive. Encapsulate live storage, declare ordering semantics, and separate lifecycle ownership. |
 | Self-tests | Shared/server/client command-driven diagnostics | Rewrite | Keep the concept but separate static audit, production health checks, smoke tests, behavioral tests, and performance tests. |
-| Spawn contracts | Explicit team/FFA/solo topology and validation | Deferred | Document vanilla spawn selection, map points, fallbacks, and each mode before adopting stricter validation. |
+| Player lifecycle tracing | Additional lifecycle diagnostics and ownership tracking | Adapt | Add observational per-player phase tracing first. Do not replace spawn/death/spectator authority until parity tests pass. |
+| Late-join synchronization | Expanded state synchronization across custom systems | Rewrite | Current synchronization is fragmented, while Trauma adds more channels. Define one versioned server-authoritative snapshot with subsystem contributors. |
+| Round reset | Additional lifecycle hooks and reset integrations | Rewrite | Current `KillPlayers` is already a broad transaction. Replace only with an ordered coordinator that preserves `DontKillPlayer`, organism, fake-up, class, balance, and equipment semantics. |
+| Death delayed work | Generation-wrapped `timer.Simple` callbacks | Rewrite | Generation guards are useful, but delayed tasks must be named internally, cancellable, attributable, and released on disconnect/transition. |
+| Spectator admission | Additional mode and UI integrations | Keep Z-City temporarily | Current behavior must remain while hard-coded team restoration and client-request handling are documented and replaced behind mode authority. |
+| Spawn contracts | Explicit team/FFA/solo topology and validation | Deferred | Core Z-City selection and fallback behavior is now documented in `zcity/player-lifecycle.md`; every stock mode's return shape and runtime behavior still require mapping. |
 | Spawn validation cache | Cache valid and invalid spawn clusters by map/mode/count | Rewrite | Cache key lacks configuration/implementation/validation versions; invalid results can become stale. |
+| Spawn candidate metadata | Named groups, topology, and validation reporting | Adapt | Preserve candidate source, policy, validation reasons, reservation state, and fallback reason without adopting Trauma's full framework. |
 | Organism | Expanded medical modules, narcotics, infection, delta networking | Deferred | High regression risk. Map vanilla organism initialization, damage, clearing, fake/death interaction, and replication first. |
 | Fake ragdoll | Extended fake, vehicle, play-dead, combat, and rendering behavior | Deferred | Core identity system. Requires full vanilla state-machine and prediction documentation. |
 | Bots | Bot driver, behavior arbitration, survival, rescue, squads, mode-specific bots | Deferred | Treat as a separate architecture after player/mode/spawn contracts are stable. Existing behavior reports show major defects. |
@@ -67,6 +73,8 @@ Each resolved row must eventually link to:
 
 - `zcity/boot-and-loading.md`
 - `zcity/mode-and-round-lifecycle.md`
+- `zcity/player-lifecycle.md`
+- `zcity/verified-defects.md`
 - `sources/trauma-inventory.md`
 - `sources/trauma-lifecycle-assessment.md`
 - `../decisions/ADR-0001-EXPLICIT_MODE_LIFECYCLE_OWNERSHIP.md`
@@ -82,5 +90,7 @@ No gameplay subsystem will be ported until these flows are documented and assign
 4. organism initialization, damage, clearing, incapacitation, and death;
 5. weapon deployment, aiming, obstruction, firing, and damage dispatch;
 6. map cleanup, shutdown, and hot-reload behavior.
+
+The ordinary player lifecycle is now mapped at the gamemode level. Fake-ragdoll, organism, player-class, inventory, equipment, and mode-specific branches remain prerequisites before item 3 is complete.
 
 These flows form the compatibility spine. Higher-level ports before them would reproduce Trauma's layering problems.
