@@ -48,6 +48,7 @@ No Trauma feature is accepted solely because it exists.
 - `../decisions/ADR-0001-EXPLICIT_MODE_LIFECYCLE_OWNERSHIP.md`
 - `../decisions/ADR-0002-TRAUMA_IS_EVIDENCE_NOT_BASELINE.md`
 - `../decisions/ADR-0003-EXPLICIT_CHARACTER_REPRESENTATION_STATE.md`
+- `../decisions/ADR-0004-DECLARED_MODE_CALLABLES_AND_OWNED_RESOURCES.md`
 
 ## Required evidence for implementation
 
@@ -85,7 +86,7 @@ The foundation research now includes:
 - a deep assessment of Trauma's lifecycle ownership attempt;
 - a weapon/combat assessment that separates weapon balance, obstruction, ragdoll combat, vehicles, projectiles, explosions, bots, and networking into independent decision areas;
 - organism-, fake-, weapon-, character-admission-, and mode-lifecycle-boundary dispositions for Trauma concepts;
-- formal decisions that Trauma is evidence rather than baseline and that character representation requires explicit authority;
+- formal decisions that Trauma is evidence rather than baseline, character representation requires explicit authority, and new modes require declared callables plus owned resources;
 - concept-level dispositions in the comparison ledger;
 - removal of duplicate documentation trees.
 
