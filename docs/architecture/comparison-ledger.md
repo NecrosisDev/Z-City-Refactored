@@ -61,10 +61,10 @@ Each resolved row must eventually link to:
 | Inventory construction | Expanded inventories, loadouts, items, and persistence | Deferred | `hg.CreateInv` is lifecycle-critical, but its definition, persistence, death/drop/disconnect behavior, and mode consumers remain unenumerated. |
 | Equipment grant orchestration | Additional loadout/equipment systems and mode integrations | Rewrite | Preserve mode-owned outcomes and current order after balancing/intermission, but replace distributed direct grants with an explicit equipment plan committed by admission/round reset. |
 | Preserved-player reset | Additional lifecycle preservation and state transfer behavior | Rewrite | `DontKillPlayer` bypasses kill, respawn, and round-reset class application. Each mode requires fixtures before a unified refresh contract replaces it. |
-| Late-join synchronization | Expanded synchronization across custom systems | Rewrite | Current synchronization is fragmented, while Trauma adds more channels. Define one versioned server-authoritative snapshot with ordered contributors and completion state. |
+| Late-join synchronization | Expanded synchronization across custom systems | Rewrite | Current synchronization is fragmented, while Trauma adds more channels. Define one versioned server-authoritative snapshot with ordered contributors and completion state under `zcity/network-contract-and-trust-boundaries.md`. |
 | Round snapshot | Multiple state and timing updates across channels | Rewrite | Replace fragmented mode/state/timing delivery with one sequenced snapshot. Preserve `RoundInfo` and `updtime` as compatibility projections during migration. |
-| Packet metadata | Broader schema and ownership concepts across Trauma networking | Adapt | Adopt owner, direction, schema version, rate policy, authority, visibility, and generation metadata; do not port Trauma's network surface wholesale. |
-| Client request validation | Numerous custom receivers with local validation patterns | Rewrite | Centralize bounded enums, rate controls, expected-state checks, permission checks, payload limits, and rejection diagnostics. |
+| Packet metadata | Broader schema and ownership concepts across Trauma networking | Adapt | Adopt owner, direction, schema version, rate policy, authority, visibility, lifetime, and generation metadata through the central endpoint registry; do not port Trauma's network surface wholesale. See `zcity/network-contract-and-trust-boundaries.md`. |
+| Client request validation | Numerous custom receivers with local validation patterns | Rewrite | Centralize bounded enums, rate controls, expected-state checks, permission checks, payload limits, work limits, and rejection diagnostics. |
 | Spectator state replication | Additional spectator and custom-system synchronization | Rewrite | Destination Z-City already duplicates target/view state across packets and NWVars. Select one authority and expose compatibility projections. |
 | Network proliferation | Additional subsystem messages to patch synchronization gaps | Reject | New channels must not substitute for a coherent snapshot, ownership registry, or stable subsystem contract. |
 | Round reset | Additional lifecycle hooks and reset integrations | Rewrite | Current `KillPlayers` is already a broad transaction. Replace only with an ordered coordinator preserving `DontKillPlayer`, organism, fake-up, class, balance, and equipment semantics. |
@@ -87,7 +87,7 @@ Each resolved row must eventually link to:
 | Fake-ragdoll delayed work | Timers and callbacks across fake, recovery, death, collision, fire, and vehicles | Rewrite | Bind every task to relevant player, round, and representation generations with cancellation and attribution. |
 | Vehicle/fake integration | Direct parenting, constraints, seat switching, camera, weapon, and ejection behavior | Rewrite | Use one optional vehicle capability adapter. Core fake and weapon behavior remains valid when Glide or another provider is absent. |
 | Bots | Driver, arbitration, survival, rescue, squads, and mode-specific bots | Deferred | Treat as a separate architecture after player/mode/spawn/weapon contracts stabilize. Existing reports show major defects and overlapping authorities. |
-| Networking | Hundreds of declarations, receivers, and sends across realms | Rewrite | Core risks are documented; the full registry, duplicate-name resolution, visibility model, payload limits, and trust-boundary audit remain required. |
+| Networking | Hundreds of declarations, receivers, and sends across realms | Rewrite | The target contract, stable requirements, acceptance tests, and Trauma attempt-family dispositions now exist. Implementation remains blocked on the generated endpoint graph, duplicate-owner resolution, exact payload/visibility/rate audit, and runtime packet/bandwidth evidence. See `zcity/network-contract-and-trust-boundaries.md` and `sources/trauma-networking-assessment.md`. |
 | Optional adapters | Glide, VJ Base, DynaBase, vFire, Pathowogen and others | Rewrite | Adapters must be capability-detected, inert when absent, isolated from vendor code, generation-safe, and tested independently. |
 | Bundled vendor systems | Large portions of Glide, DynaBase, vFire and related content included | Reject as default architecture | Prefer external dependencies or isolated vendor packages. Project adapters must not be mixed with vendor internals. |
 | Minimap | Bake, sync, client map, and relation hooks | Unreviewed | Requires separate stability, authority, privacy, performance, and value assessment. |
@@ -115,6 +115,7 @@ Each resolved row must eventually link to:
 - `zcity/player-lifecycle.md`
 - `zcity/player-class-inventory-equipment-boundary.md`
 - `zcity/round-and-spectator-networking.md`
+- `zcity/network-contract-and-trust-boundaries.md`
 - `zcity/organism-lifecycle-and-damage.md`
 - `zcity/fake-ragdoll-lifecycle.md`
 - `zcity/weapon-and-combat-interfaces.md`
@@ -122,6 +123,7 @@ Each resolved row must eventually link to:
 - `zcity/verified-defects.md`
 - `sources/trauma-clean-inventory.md`
 - `sources/trauma-mode-lifecycle-comparison.md`
+- `sources/trauma-networking-assessment.md`
 - `sources/trauma-lifecycle-assessment.md`
 - `sources/trauma-weapon-combat-assessment.md`
 - `../decisions/ADR-0001-EXPLICIT_MODE_LIFECYCLE_OWNERSHIP.md`
@@ -147,6 +149,7 @@ Current status:
 - organism and fake-ragdoll ownership risks are substantially source-mapped, but runtime fixtures and remaining consumers are incomplete;
 - ordinary player and spectator flows are source-mapped, but mode-specific, movement, inventory/class implementation, replication, and runtime fixtures remain incomplete;
 - weapon concepts have bounded dispositions, and exhaustive local source search is now available, but the complete publisher/consumer and fire graph is still pending;
-- cleanup, shutdown, full network registry, bots/NPCs, and adapter/vendor separation remain major prerequisites.
+- the network target contract and Trauma dispositions are defined, but the generated endpoint registry, duplicate resolution, packet captures, and bandwidth/handler-time evidence remain prerequisites;
+- cleanup, shutdown, bots/NPCs, and adapter/vendor separation remain major prerequisites.
 
 These flows form the compatibility spine. Work packages must preserve them or document and test an intentional divergence.
