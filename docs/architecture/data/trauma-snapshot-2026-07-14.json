@@ -1,6 +1,8 @@
 {
   "schema_version": 1,
   "captured_at": "2026-07-14",
+  "status": "superseded_for_implementation_guidance",
+  "superseded_by": "source-snapshots-2026-07-14.json",
   "source": {
     "name": "Trauma.zip",
     "sha256": "0286d0f25f9744cc6387e8676e9429ef11a8991bbad6bda45961f4358b534652",
@@ -31,8 +33,9 @@
     "named_timers": 4
   },
   "notes": [
+    "This is a historical snapshot and must not be used as the current Trauma build source.",
     "Counts are static textual observations and may include comments, dead branches, realm-paired definitions, or compatibility declarations.",
     "A duplicate group is not automatically a defect; it requires realm-aware and lifecycle-aware classification.",
-    "This snapshot is evidence for prioritization and does not certify runtime behavior."
+    "Runtime parity requires the project evidence and testing standard."
   ]
 }
