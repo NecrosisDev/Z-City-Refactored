@@ -1,98 +1,104 @@
 # Z-City Refactor Method
 
+- **Status:** Normative investigation and decision method
+- **Implementation guide:** `BUILD_GUIDE.md`
+- **Source registry:** `architecture/source-baselines.md`
+
 ## Purpose
 
-This repository is being developed by comparing three bodies of work:
+The refactor compares distinct bodies of work without conflating them:
 
-1. **Vanilla Z-City** — the behavioral reference.
-2. **The current Refactored repository** — the integration and deployment baseline.
-3. **Trauma** — an experimental implementation containing both useful concepts and substantial technical debt.
+1. the upstream vanilla snapshot;
+2. the destination baseline and working branch;
+3. the current Trauma prototype;
+4. historical Trauma material and prior experiments.
 
-Trauma is not an authoritative replacement for vanilla Z-City. No Trauma implementation is accepted merely because it is newer or more modular in appearance.
+Exact definitions and hashes are maintained in `architecture/source-baselines.md`.
+
+Trauma is not an authoritative replacement for Z-City. Upstream commits are not automatic cherry-picks. The new project may retain behavior, adapt a concept, or intentionally diverge only through documented requirements and tests.
 
 ## Decision hierarchy
 
-When implementations disagree, use this order:
+1. Establish existing behavior using the evidence standard.
+2. Preserve verified compatibility unless an intentional change is approved.
+3. Apply accepted ADRs and cross-cutting standards.
+4. Prefer explicit authority, ownership, realm boundaries, lifecycle, and rollback.
+5. Reject abstractions whose operational risk exceeds their benefit.
+6. Require acceptance tests before behavior-changing migration.
 
-1. Preserve verified vanilla gameplay behavior unless a change is intentional and documented.
-2. Preserve compatibility required by existing servers, maps, weapons, entities, and addons.
-3. Prefer explicit APIs, deterministic lifecycle ownership, and clear realm boundaries.
-4. Reject abstractions whose operational risk exceeds their benefit.
-5. Require an acceptance test for every behavior-changing migration.
+## Evidence
 
-## Evidence levels
+Use the labels and test classes in `architecture/standards/evidence-and-testing.md`.
 
-Every claim in this documentation must use one of these labels:
+Important interpretation rule:
 
-- **Verified:** Directly confirmed in executable source.
-- **Observed:** Seen in runtime output, logs, or reproducible behavior.
-- **Inferred:** Strongly implied by several code paths but not yet runtime-tested.
-- **Claimed:** Present only in comments, names, documentation, or design intent.
-- **Unknown:** Not yet established.
+> Direct source inspection can verify code structure and possible execution paths. It does not by itself verify runtime outcome or gameplay parity.
 
-Comments are evidence of intent, not evidence of behavior.
+Comments, file names, Trauma documentation, release claims, and self-test summaries are evidence leads, not authority.
 
 ## Per-system workflow
 
-Each subsystem is processed through the following sequence:
+Process each subsystem in this order:
 
-1. Locate all entry points and owners.
-2. Reconstruct the actual vanilla lifecycle.
-3. Record hooks, timers, network messages, ConVars, commands, globals, files, and external dependencies.
-4. Identify implicit contracts and ordering assumptions.
-5. Inventory the corresponding Trauma changes.
-6. Compare behavior and failure modes.
-7. Classify each Trauma attempt as:
-   - **Adopt** — concept and implementation are suitable.
-   - **Adapt** — implementation needs limited integration work.
-   - **Rewrite** — intent is useful, implementation is unsafe or overly coupled.
-   - **Reject** — no adequate benefit or unacceptable regression risk.
-   - **Keep Vanilla** — existing behavior is preferable.
-8. Write an ADR for material decisions.
-9. Define acceptance tests before implementation.
-10. Migrate in small, reviewable commits.
+1. Bind the review to exact source snapshots.
+2. Enumerate all files, entry points, publishers, consumers, hooks, timers, messages, commands, ConVars, globals, entities, constraints, persistence, and external dependencies.
+3. Reconstruct actual destination-baseline lifecycle and ordering.
+4. Compare later upstream vanilla changes separately.
+5. Inventory corresponding Trauma attempts and their dependencies.
+6. Identify authority, realm, lifetime, cleanup, failure, security, and performance characteristics.
+7. Record compatibility invariants and ambiguity.
+8. Classify each candidate:
+   - **Keep Z-City**;
+   - **Adopt**;
+   - **Adapt**;
+   - **Rewrite**;
+   - **Reject**;
+   - **Deferred**.
+9. Write or update an ADR for material architecture decisions.
+10. Assign requirement and acceptance-test IDs.
+11. Create a work package satisfying `BUILD_GUIDE.md`.
+12. Implement in a small compatibility-preserving slice.
+13. Run parity, fault, security, cleanup, and performance tests appropriate to the risk.
+14. Update the ledger, defect status, and removal criteria.
 
-## Required system documentation
+## Required subsystem documentation
 
-Each mature subsystem document must include:
+A mature subsystem document includes:
 
-- Purpose and ownership
-- Entry points and lifecycle
-- Public and internal interfaces
-- Data model and persistent state
-- Realm behavior
-- Hook registry
-- Timer registry
-- Network registry and trust boundaries
-- ConVar and command registry
-- Dependencies and adapters
-- Vanilla behavioral contracts
-- Trauma attempts
-- Known defects and ambiguity
-- Performance characteristics
-- Migration decision
-- Acceptance tests
+- source baseline, hash/commit, paths, realm, and review date;
+- evidence and runtime/test status;
+- purpose and current authority;
+- entry points and lifecycle;
+- public and internal interfaces;
+- data model and persistent state;
+- hook, timer, network, command, ConVar, entity, and constraint registries;
+- ordering and hot-path behavior;
+- dependencies and optional adapters;
+- destination-baseline compatibility contracts;
+- later upstream delta;
+- Trauma attempts and disposition;
+- known defects and unknowns;
+- security and performance implications;
+- target authority and migration boundary;
+- stable requirements and acceptance-test IDs;
+- compatibility, rollout, rollback, and legacy removal criteria.
 
 ## Migration constraints
 
-- The legacy `hg` and `zb` namespaces remain compatibility surfaces until callers are inventoried and migrated.
-- Global registration functions must not be replaced to infer ownership.
-- Mode or subsystem ownership must be explicit at registration time.
-- Optional integrations must fail closed and leave core gameplay operational.
-- Load order must be explicit where behavior depends on order.
-- Shared files must not silently become server-only or client-only.
-- Client-delivered code and network handlers must be treated as untrusted surfaces.
-- Hot reload support must not weaken ordinary startup correctness.
+- Legacy `hg` and `zb` surfaces remain compatibility projections until callers are inventoried and migrated.
+- New runtime resources follow `architecture/standards/runtime-ownership-and-generations.md`.
+- Global registration functions are not replaced to infer ownership.
+- Optional integrations fail isolated and leave core gameplay operational.
+- Load order is explicit where behavior depends on order.
+- Shared files do not silently become server-only or client-only.
+- Client-delivered code and client-originated payloads are untrusted.
+- Hot reload support does not weaken clean-start correctness.
+- Critical initialization does not continue silently after partial failure.
+- Runtime and persistent state changes have rollback and downgrade behavior.
+- Compatibility layers have telemetry and removal criteria.
 
-## Initial work order
+## Work order
 
-1. Boot, realm loading, and deferred initialization
-2. Gamemode and round lifecycle
-3. Player spawn, death, fake-ragdoll, and organism reset
-4. Damage, organism, blood, pain, and death
-5. Weapons, aiming, obstruction, and vehicles
-6. Networking and client trust boundaries
-7. NPCs and bots
-8. UI, administration, persistence, and external adapters
+Follow the phases in `BUILD_GUIDE.md` rather than extending research indefinitely. Analysis for a subsystem is complete enough to implement when Gates 0–2 are satisfied, not when every possible source file in the project has been described.
 
-This file is the governing method for the documentation and refactor branch.
+This file governs investigation. `BUILD_GUIDE.md` governs implementation.
