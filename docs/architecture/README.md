@@ -26,6 +26,7 @@ No Trauma feature is accepted solely because it exists.
 - `zcity/boot-and-loading.md`
 - `zcity/mode-and-round-lifecycle.md`
 - `zcity/mode-method-dispatch-and-hot-reload.md`
+- `zcity/mode-contract-and-resource-ownership.md`
 - `zcity/player-lifecycle.md`
 - `zcity/player-class-inventory-equipment-boundary.md`
 - `zcity/round-and-spectator-networking.md`
@@ -72,6 +73,7 @@ The foundation research now includes:
 - current addon boot/load behavior;
 - current mode registration and round lifecycle;
 - the loader-level mode method projection, dispatcher replacement, retained-state, partial-load, and hot-reload boundary;
+- an explicit mode method-classification, resource-ownership, lifetime, activation, rollback, retained-state, legacy-adapter, and acceptance-test contract;
 - gamemode-level player spawn, death, spectator, and respawn behavior;
 - the verified orchestration boundary between team assignment, inventory creation, direct spawn placement, round-reset class application, balancing, intermission, and mode equipment grants;
 - core round and spectator packet schemas, direction, authority, and late-join risks;
@@ -92,7 +94,7 @@ The foundation research now includes:
 Work should proceed in this order:
 
 1. complete current-Z-City weapon publisher enumeration for `ishgweapon`, `RagdollFunc`, `IsPistolHoldType`, `IsResting`, `ismelee`, and `ismelee2`;
-2. enumerate every stock mode-table function, its direct callers, matching `hook.Run` emitters, realm, return contract, and direct resources;
+2. apply the new inventory schema to every stock mode-table function, direct caller, matching `hook.Run` emitter, realm, return contract, direct resource, and retained-state owner;
 3. enumerate every caller and implementation participating in `SetupTeam`, `CreateInv`, `SetPlayerClass`, mode `GiveEquipment`, `Intermission`, `DontKillPlayer`, `OverrideSpawn`, and `GetTeamSpawn`;
 4. complete movement and mode-specific player lifecycle branches;
 5. weapon switch, drop, pickup, loadout, ammo, reload, and restoration ownership;
