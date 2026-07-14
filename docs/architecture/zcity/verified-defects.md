@@ -187,6 +187,38 @@ This register contains defects established by direct static inspection of the cu
 - **Impact:** A delayed callback can apply after respawn, a newer spectator response, Lua refresh, or mode transition.
 - **Disposition:** Replace with an owned client task or immediate idempotent state application guarded by spectator generation.
 
+## ZC-FND-024 — Fake-body weapon capability detection is untyped and distributed
+
+- **Area:** Weapon/fake-ragdoll integration
+- **Source:** `lua/homigrad/fake/sv_control.lua`
+- **Observed:** Firearm and melee behavior is selected through `ishgweapon`, `IsPistolHoldType`, `IsResting`, `RagdollFunc`, `ismelee`, and `ismelee2` rather than one validated capability record.
+- **Impact:** Weapons can be classified inconsistently, missing methods can fail inside the body loop, and precedence changes can silently alter combat behavior.
+- **Disposition:** Preserve legacy outcomes through an adapter, then migrate publishers to a typed weapon capability contract.
+
+## ZC-FND-025 — Weapon callbacks execute inside the monolithic fake-body transaction
+
+- **Area:** Weapon authority
+- **Source:** `lua/homigrad/fake/sv_control.lua`
+- **Observed:** `RagdollFunc` executes from the same frame loop that owns player input, limb posing, constraints, organism gating, stamina, pain, and fallback actions.
+- **Impact:** A weapon callback can mutate character, organism, physics, projectile, or global state without lifecycle ownership, rollback, cost isolation, or stale-generation rejection.
+- **Disposition:** Introduce an event-scoped fake-body action context and owned resources while retaining current callback compatibility temporarily.
+
+## ZC-FND-026 — Fake weapon actions lack representation and command generations
+
+- **Area:** Weapon prediction and lifecycle
+- **Source:** server fake-body control and separate client camera/render paths
+- **Observed:** The verified path reads current keys and eye angles but has no documented command sequence, weapon generation, character-representation generation, callback sequence, or acknowledgement.
+- **Impact:** Weapon actions and client presentation can diverge under latency, and stale actions can survive switch, get-up, death, disconnect, or entity replacement.
+- **Disposition:** Add authoritative action identities and reject work whose weapon or representation generation is no longer current.
+
+## ZC-FND-027 — Get-up weapon restoration is not a complete instance transaction
+
+- **Area:** Weapon persistence
+- **Sources:** fake entry/recovery paths surrounding `Player:Spawn()`
+- **Observed:** Recovery preserves and reselects visible weapon state around a full respawn, but the inspected contract does not cover clips, reserve ammo, chamber state, attachments, reload phase, cooldowns, callbacks, constraints, projectiles, or pending delayed work.
+- **Impact:** Get-up can lose, reset, duplicate, or continue hidden weapon state while appearing to restore the same weapon class.
+- **Disposition:** Define a versioned weapon-instance snapshot/restore transaction and test duplicate/loss behavior before replacing the compatibility path.
+
 ## Verification policy
 
 A defect can be closed only when:
