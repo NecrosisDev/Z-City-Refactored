@@ -29,6 +29,7 @@ No Trauma feature is accepted solely because it exists.
 - `zcity/round-and-spectator-networking.md`
 - `zcity/organism-lifecycle-and-damage.md`
 - `zcity/fake-ragdoll-lifecycle.md`
+- `zcity/weapon-and-combat-interfaces.md`
 - `zcity/verified-defects.md`
 
 ### Trauma evidence
@@ -72,10 +73,11 @@ The foundation research now includes:
 - core round and spectator packet schemas, direction, authority, and late-join risks;
 - organism ownership, schema reset, simulation order, damage, incapacitation, replication, and cleanup contracts;
 - fake-ragdoll creation, identity, control, recovery, death conversion, vehicles, prediction, and cleanup contracts;
+- verified fake-body weapon capability, input, organism, prediction, restoration, and authority interfaces;
 - a specific foundation defect register;
 - a structural Trauma inventory with reproducible snapshot identity;
 - a deep assessment of Trauma's lifecycle ownership attempt;
-- a preliminary weapon/combat assessment that separates weapon balance, obstruction, ragdoll combat, vehicles, projectiles, explosions, bots, and networking into independent decision areas;
+- a weapon/combat assessment that separates weapon balance, obstruction, ragdoll combat, vehicles, projectiles, explosions, bots, and networking into independent decision areas;
 - organism-, fake-, and weapon-boundary dispositions for Trauma medical, networking, ownership, presentation, vehicle, and combat concepts;
 - formal decisions that Trauma is evidence rather than baseline and that character representation requires explicit authority;
 - concept-level dispositions in the comparison ledger;
@@ -85,15 +87,15 @@ The foundation research now includes:
 
 Work should proceed in this order:
 
-1. exact current-Z-City weapon source enumeration, including `ishgweapon`, `RagdollFunc`, `IsPistolHoldType`, `IsResting`, `ismelee`, and `ismelee2` publishers and consumers;
+1. complete current-Z-City weapon publisher enumeration for `ishgweapon`, `RagdollFunc`, `IsPistolHoldType`, `IsResting`, `ismelee`, and `ismelee2`;
 2. player-class, movement, inventory, equipment, and mode-specific player lifecycle branches;
-3. fake-ragdoll combat and weapon ownership consumers;
-4. remaining medical-item and organism packet/NetVar consumers;
-5. weapon deploy, input, ADS, obstruction, firing, projectile/bullet, ammo, and damage dispatch;
-6. map cleanup, shutdown, disconnect, and hot reload;
-7. complete network ownership and payload registry beyond the core round/spectator baseline;
-8. direct mode-resource inventory;
-9. CustomGM requirement extraction;
-10. adapter and vendor-boundary inventory.
+3. weapon switch, drop, pickup, loadout, ammo, reload, and restoration ownership;
+4. ADS, ready stance, obstruction, authoritative fire origin, and vehicle free aim;
+5. hitscan, physical bullets, projectiles, penetration, damage dispatch, effects, and explosives;
+6. bot/NPC weapon capability publication and consumption;
+7. remaining medical-item and organism packet/NetVar consumers;
+8. map cleanup, shutdown, disconnect, and hot reload;
+9. complete network ownership and payload registry beyond the core round/spectator baseline;
+10. direct mode-resource, CustomGM requirement, adapter, and vendor-boundary inventories.
 
 Production refactoring remains blocked until the relevant compatibility path has acceptance tests.
