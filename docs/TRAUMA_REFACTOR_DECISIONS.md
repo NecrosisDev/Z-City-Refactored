@@ -115,6 +115,28 @@ Do not recreate the previous broad facade/registry architecture merely because i
 
 **Status:** implemented as a dependency-free, failure-isolated integration seam; vendor-specific adapter remains separate and unapproved.
 
+### TZ-008 — Trauma animation-source imports are not approved
+
+**Trauma intent:** add Mighty Kicking, NPC gesture/posture, and extended-player animation sources through wOS DynaBase.
+
+**Observed runtime behavior:** Trauma reports those sources as registered, then DynaBase fails while writing its animation pointer because the expected model file is nil. The same startup also reports missing player models and invalid model headers. This proves that registration success alone did not establish a usable animation dependency chain.
+
+**Vanilla baseline:** the current Z-City branch can load and run its native animation behavior without these Trauma-labelled DynaBase sources. No exact vanilla owner file or complete source package for the attempted imports has been verified on the current branch.
+
+**Comparison:** the attempted additions offer potentially useful kicks, NPC gestures, postures, and broader player animations, but their runtime dependency was incomplete. Importing names, registration calls, or archived source declarations would add a failure surface without proving animation compatibility, model availability, realm-safe loading, or fallback behavior.
+
+**Decision:** reject the attempted Trauma animation-source imports in their current form. A future animation enhancement is considered only when one exact feature has:
+
+- an inspectable animation source and required pointer model;
+- verified model and sequence availability before registration;
+- a complete optional DynaBase API check;
+- an inert fallback preserving native animations;
+- one bounded gameplay consumer and live acceptance test.
+
+**Production impact:** none. No DynaBase hooks, source names, workshop dependencies, player models, or animation loaders were added to core Z-City.
+
+**Status:** explicit rejection of the attempted implementation; the individual gameplay ideas remain eligible for clean, separately justified implementations.
+
 ## Rejected approaches
 
 The following are not justified for the refactor:
@@ -128,10 +150,11 @@ The following are not justified for the refactor:
 - treating archived generated diffs, ZIP handoffs, or guidestones as current repository implementation;
 - rebuilding the entire prior refactor scaffolding before a concrete gameplay migration requires it;
 - scattering vendor permission checks throughout individual C-menu properties;
-- embedding an unverified ULX/ULib API contract into core Z-City code.
+- embedding an unverified ULX/ULib API contract into core Z-City code;
+- importing Trauma-labelled DynaBase sources from registration logs or archived declarations without their complete validated asset chain.
 
 ## Next bounded migration candidate
 
-The permission boundary is complete until a pinned provider implementation is supplied. The next run should leave permissions alone and select one different Trauma concept with an exact vanilla owner and an inspectable source counterpart. It must produce either one bounded refinement or one explicit rejection; it must not return to broad inventories.
+Permissions and the attempted DynaBase imports are closed at their current evidence boundaries. The next run should select one Trauma gameplay concept whose source and exact vanilla owner can both be inspected. It must implement one minimal refinement or record one explicit rejection; missing source evidence is not permission to invent an abstraction.
 
-Production Lua changed only at the verified `ZCTools_GetAccess` owner. No property implementation, network protocol, round behavior, organism behavior, or vendor dependency was modified.
+Production Lua changed only at the verified `ZCTools_GetAccess` owner. No property implementation, network protocol, round behavior, organism behavior, animation runtime, asset registration, or vendor dependency was modified.
