@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-14",
+  "status": "superseded_for_implementation_guidance",
+  "superseded_by": "source-snapshots-2026-07-14.json",
+  "source": {
+    "name": "Trauma.zip",
+    "sha256": "0286d0f25f9744cc6387e8676e9429ef11a8991bbad6bda45961f4358b534652",
+    "archive_bytes": 4425563,
+    "root": "TMod"
+  },
+  "lua": {
+    "file_count": 1028,
+    "source_bytes": 8624000
+  },
+  "registrations": {
+    "hook_add_calls": 1150,
+    "timer_create_calls": 90,
+    "timer_simple_calls": 546,
+    "network_string_declarations": 327,
+    "net_receive_calls": 340,
+    "net_start_calls": 465,
+    "server_convar_calls": 236,
+    "client_convar_calls": 119,
+    "console_command_calls": 200,
+    "file_write_calls": 42
+  },
+  "literal_duplicate_groups": {
+    "network_string_declarations": 5,
+    "net_receivers": 30,
+    "hook_event_identifier_pairs": 9,
+    "convars": 30,
+    "named_timers": 4
+  },
+  "notes": [
+    "This is a historical snapshot and must not be used as the current Trauma build source.",
+    "Counts are static textual observations and may include comments, dead branches, realm-paired definitions, or compatibility declarations.",
+    "A duplicate group is not automatically a defect; it requires realm-aware and lifecycle-aware classification.",
+    "Runtime parity requires the project evidence and testing standard."
+  ]
+}
